@@ -61,8 +61,8 @@ export default function CaptureScreen({ onDone, onCancel }) {
     }
     try {
       setStage('saving');
-      const { audioBase64 } = await synthesize(clean);
-      const session = await saveSession({ text: clean, sentences, audioBase64 });
+      const { audioBase64, mimeType } = await synthesize(clean);
+      const session = await saveSession({ text: clean, sentences, audioBase64, mimeType });
       onDone(session);
     } catch (e) {
       Alert.alert('音声の作成に失敗', String(e.message || e));

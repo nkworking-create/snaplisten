@@ -3,7 +3,10 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 // Sessions are stored in two parts:
 //   - metadata list  -> AsyncStorage (small JSON)
-//   - the mp3 audio   -> a real file on disk (so replay is offline + instant)
+//   - the audio file  -> a real file on disk (so replay is offline + instant)
+//
+// Audio format depends on the TTS provider: Gemini -> wav, ElevenLabs -> mp3.
+// We pick the file extension from the mimeType the relay returns.
 
 const INDEX_KEY = 'snaplisten.sessions';
 const AUDIO_DIR = `${FileSystem.documentDirectory}snaplisten/`;
@@ -26,11 +29,12 @@ async function writeIndex(list) {
   await AsyncStorage.setItem(INDEX_KEY, JSON.stringify(list));
 }
 
-// Save a new session: write the mp3 to disk, add metadata to the index.
-export async function saveSession({ text, sentences, audioBase64 }) {
+// Save a new session: write the audio to disk, add metadata to the index.
+export async function saveSession({ text, sentences, audioBase64, mimeType }) {
   await ensureDir();
   const id = String(Date.now());
-  const audioUri = `${AUDIO_DIR}${id}.mp3`;
+  const ext = mimeType && mimeType.includes('wav') ? 'wav' : 'mp3';
+  const audioUri = `${AUDIO_DIR}${id}.${ext}`;
   await FileSystem.writeAsStringAsync(audioUri, audioBase64, {
     encoding: FileSystem.EncodingType.Base64,
   });
