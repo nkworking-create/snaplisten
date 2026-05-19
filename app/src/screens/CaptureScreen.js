@@ -4,7 +4,7 @@ import {
   ActivityIndicator, ScrollView, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ocrImage, synthesize } from '../api';
+import { ocrImage } from '../api';
 import { saveSession } from '../storage';
 
 // Split (possibly edited) text into sentences (used for the loop drill).
@@ -67,12 +67,9 @@ export default function CaptureScreen({ onDone, onCancel }) {
     }
     try {
       setStage('saving');
-      const { audioBase64, mimeType } = await synthesize(clean);
       const session = await saveSession({
         text: clean,
         sentences: splitSentences(clean),
-        audioBase64,
-        mimeType,
       });
       onDone(session);
     } catch (e) {
@@ -84,9 +81,9 @@ export default function CaptureScreen({ onDone, onCancel }) {
   if (stage === 'ocr' || stage === 'saving') {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+        <ActivityIndicator size="large" color="#374151" />
         <Text style={styles.muted}>
-          {stage === 'ocr' ? '文字を読み取り中…' : '音声を作成中…'}
+          {stage === 'ocr' ? '文字を読み取り中…' : '保存中…'}
         </Text>
       </View>
     );
@@ -122,14 +119,13 @@ export default function CaptureScreen({ onDone, onCancel }) {
   return (
     <View style={styles.flex}>
       <Text style={styles.heading}>英文を取り込む</Text>
-      <Text style={styles.muted}>本・看板・スクショ、なんでもOK。</Text>
       <View style={{ height: 24 }} />
       <TouchableOpacity style={[styles.btn, styles.primary]} onPress={takePhoto}>
-        <Text style={styles.primaryText}>📷  カメラで撮る</Text>
+        <Text style={styles.primaryText}>カメラで撮る</Text>
       </TouchableOpacity>
       <View style={{ height: 12 }} />
       <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={pickPhoto}>
-        <Text style={styles.secondaryText}>🖼  写真から選ぶ</Text>
+        <Text style={styles.secondaryText}>写真から選ぶ</Text>
       </TouchableOpacity>
       <View style={{ height: 24 }} />
       <TouchableOpacity onPress={onCancel}>
@@ -151,11 +147,11 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', gap: 12 },
   btn: { flex: 1, paddingVertical: 16, borderRadius: 14, alignItems: 'center' },
-  primary: { backgroundColor: '#4f46e5' },
+  primary: { backgroundColor: '#374151' },
   primaryText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  secondary: { backgroundColor: '#eef2ff' },
-  secondaryText: { color: '#4f46e5', fontSize: 16, fontWeight: '700' },
+  secondary: { backgroundColor: '#f3f4f6' },
+  secondaryText: { color: '#374151', fontSize: 16, fontWeight: '700' },
   ghost: { backgroundColor: '#f3f4f6' },
   ghostText: { color: '#374151', fontSize: 16, fontWeight: '600' },
-  link: { color: '#4f46e5', fontSize: 15, textAlign: 'center' },
+  link: { color: '#374151', fontSize: 15, textAlign: 'center' },
 });

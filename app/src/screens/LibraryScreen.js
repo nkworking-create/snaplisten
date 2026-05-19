@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 17, fontWeight: '600', color: '#111827' },
   cardDate: { fontSize: 13, color: '#9ca3af', marginTop: 6 },
   fab: {
-    backgroundColor: '#4f46e5', paddingVertical: 18, borderRadius: 16,
+    backgroundColor: '#374151', paddingVertical: 18, borderRadius: 16,
     alignItems: 'center', marginTop: 12,
   },
   fabText: { color: '#fff', fontSize: 17, fontWeight: '700' },

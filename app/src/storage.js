@@ -3,11 +3,11 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 // A session stores:
 //   - metadata + sentence text  -> AsyncStorage (small JSON)
-//   - the FULL passage audio    -> one file (made once at save, 1 request)
-//   - per-sentence clips        -> made lazily the first time a sentence
-//                                  is drilled, then cached on disk forever
-// This keeps saving fast/reliable (1 request) while still allowing the
-// "loop one sentence" drill, without bursting the TTS rate limit.
+//   - per-sentence audio clips   -> made lazily the first time a sentence
+//                                   is played, then cached on disk forever
+// Saving makes NO audio (instant, zero requests). Audio is generated one
+// sentence at a time as it's played, so we always know which sentence is
+// active (for highlighting) and never burst the TTS rate limit.
 
 const INDEX_KEY = 'snaplisten.sessions';
 const AUDIO_DIR = `${FileSystem.documentDirectory}snaplisten/`;
@@ -31,15 +31,9 @@ async function writeIndex(list) {
   await AsyncStorage.setItem(INDEX_KEY, JSON.stringify(list));
 }
 
-// Save: write the full-passage audio once. Clips start empty.
-export async function saveSession({ text, sentences, audioBase64, mimeType }) {
-  await ensureDir();
+// Save: just metadata + sentences. No audio yet (instant, no network).
+export async function saveSession({ text, sentences }) {
   const id = String(Date.now());
-  const audioUri = `${AUDIO_DIR}${id}.${extOf(mimeType)}`;
-  await FileSystem.writeAsStringAsync(audioUri, audioBase64, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-
   const title =
     (text || '').trim().slice(0, 48).replace(/\s+/g, ' ') || 'Untitled';
 
@@ -48,8 +42,7 @@ export async function saveSession({ text, sentences, audioBase64, mimeType }) {
     title,
     text: text || '',
     sentences: sentences || [],
-    audioUri,
-    clips: {}, // index -> uri, filled on demand
+    clips: {}, // sentence index -> audio file uri, filled on demand
     createdAt: Date.now(),
   };
 
@@ -79,8 +72,6 @@ export async function deleteSession(id) {
   const list = await listSessions();
   const target = list.find((s) => s.id === id);
   if (target) {
-    if (target.audioUri)
-      await FileSystem.deleteAsync(target.audioUri, { idempotent: true });
     for (const uri of Object.values(target.clips || {}))
       await FileSystem.deleteAsync(uri, { idempotent: true });
   }
