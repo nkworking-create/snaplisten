@@ -1,15 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 
-// Sessions are stored in two parts:
-//   - metadata list   -> AsyncStorage (small JSON)
-//   - one audio file PER SENTENCE -> real files on disk
-// Per-sentence files are what make the "loop one sentence" drill work,
-// and replay stays offline + instant after the first save.
-// Extension follows the provider: Gemini -> wav, ElevenLabs -> mp3.
+// A session stores:
+//   - metadata + sentence text  -> AsyncStorage (small JSON)
+//   - the FULL passage audio    -> one file (made once at save, 1 request)
+//   - per-sentence clips        -> made lazily the first time a sentence
+//                                  is drilled, then cached on disk forever
+// This keeps saving fast/reliable (1 request) while still allowing the
+// "loop one sentence" drill, without bursting the TTS rate limit.
 
 const INDEX_KEY = 'snaplisten.sessions';
 const AUDIO_DIR = `${FileSystem.documentDirectory}snaplisten/`;
+
+const extOf = (mimeType) => (mimeType && mimeType.includes('wav') ? 'wav' : 'mp3');
 
 async function ensureDir() {
   const info = await FileSystem.getInfoAsync(AUDIO_DIR);
@@ -21,7 +24,6 @@ async function ensureDir() {
 export async function listSessions() {
   const raw = await AsyncStorage.getItem(INDEX_KEY);
   const list = raw ? JSON.parse(raw) : [];
-  // Newest first.
   return list.sort((a, b) => b.createdAt - a.createdAt);
 }
 
@@ -29,22 +31,14 @@ async function writeIndex(list) {
   await AsyncStorage.setItem(INDEX_KEY, JSON.stringify(list));
 }
 
-// Save a new session: write one audio file per sentence clip, index it.
-// clips: [{ text, audioBase64, mimeType }]
-export async function saveSession({ text, clips }) {
+// Save: write the full-passage audio once. Clips start empty.
+export async function saveSession({ text, sentences, audioBase64, mimeType }) {
   await ensureDir();
   const id = String(Date.now());
-
-  const stored = [];
-  for (let i = 0; i < clips.length; i++) {
-    const c = clips[i];
-    const ext = c.mimeType && c.mimeType.includes('wav') ? 'wav' : 'mp3';
-    const uri = `${AUDIO_DIR}${id}_${i}.${ext}`;
-    await FileSystem.writeAsStringAsync(uri, c.audioBase64, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    stored.push({ text: c.text, uri });
-  }
+  const audioUri = `${AUDIO_DIR}${id}.${extOf(mimeType)}`;
+  await FileSystem.writeAsStringAsync(audioUri, audioBase64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
 
   const title =
     (text || '').trim().slice(0, 48).replace(/\s+/g, ' ') || 'Untitled';
@@ -53,21 +47,42 @@ export async function saveSession({ text, clips }) {
     id,
     title,
     text: text || '',
-    sentences: stored.map((s) => s.text),
-    clips: stored,
+    sentences: sentences || [],
+    audioUri,
+    clips: {}, // index -> uri, filled on demand
     createdAt: Date.now(),
   };
 
-  const list = await listSessions();
-  await writeIndex([session, ...list]);
+  await writeIndex([session, ...(await listSessions())]);
   return session;
+}
+
+// Write one sentence's audio and remember it on the session. Returns its uri.
+export async function attachClip(sessionId, index, audioBase64, mimeType) {
+  await ensureDir();
+  const uri = `${AUDIO_DIR}${sessionId}_s${index}.${extOf(mimeType)}`;
+  await FileSystem.writeAsStringAsync(uri, audioBase64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const list = await listSessions();
+  for (const s of list) {
+    if (s.id === sessionId) {
+      s.clips = { ...(s.clips || {}), [index]: uri };
+      break;
+    }
+  }
+  await writeIndex(list);
+  return uri;
 }
 
 export async function deleteSession(id) {
   const list = await listSessions();
   const target = list.find((s) => s.id === id);
-  for (const c of target?.clips || []) {
-    await FileSystem.deleteAsync(c.uri, { idempotent: true });
+  if (target) {
+    if (target.audioUri)
+      await FileSystem.deleteAsync(target.audioUri, { idempotent: true });
+    for (const uri of Object.values(target.clips || {}))
+      await FileSystem.deleteAsync(uri, { idempotent: true });
   }
   await writeIndex(list.filter((s) => s.id !== id));
 }

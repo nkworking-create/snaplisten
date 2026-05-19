@@ -4,10 +4,10 @@ import {
   ActivityIndicator, ScrollView, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ocrImage, synthesizeSentences } from '../api';
+import { ocrImage, synthesize } from '../api';
 import { saveSession } from '../storage';
 
-// Split (possibly edited) text into sentences for per-sentence audio.
+// Split (possibly edited) text into sentences (used for the loop drill).
 function splitSentences(t) {
   const parts = t.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
   return parts.length ? parts : [t.trim()];
@@ -67,8 +67,13 @@ export default function CaptureScreen({ onDone, onCancel }) {
     }
     try {
       setStage('saving');
-      const { clips } = await synthesizeSentences(splitSentences(clean));
-      const session = await saveSession({ text: clean, clips });
+      const { audioBase64, mimeType } = await synthesize(clean);
+      const session = await saveSession({
+        text: clean,
+        sentences: splitSentences(clean),
+        audioBase64,
+        mimeType,
+      });
       onDone(session);
     } catch (e) {
       Alert.alert('音声の作成に失敗', String(e.message || e));
