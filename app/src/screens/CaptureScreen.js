@@ -4,54 +4,21 @@ import {
   ActivityIndicator, ScrollView, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ocrImage, synthesize } from '../api';
-import { saveSession, attachClip, deleteSession } from '../storage';
+import { ocrImage } from '../api';
+import { saveSession } from '../storage';
 
-// Split (possibly edited) text into sentences (used for the loop drill).
+// Split (possibly edited) text into sentences for the loop drill.
 function splitSentences(t) {
   const parts = t.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
   return parts.length ? parts : [t.trim()];
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// Generate every sentence's audio up front, one at a time, pausing and
-// retrying on rate limits. Slow but it always finishes — after this,
-// playback is fully offline and never stutters, no matter how much you loop.
-async function prepareAudio(session, list, onProgress) {
-  const backoff = [6000, 12000, 25000, 45000];
-  for (let i = 0; i < list.length; i++) {
-    let done = false;
-    for (let attempt = 0; attempt < 5 && !done; attempt++) {
-      try {
-        const { audioBase64, mimeType } = await synthesize(list[i]);
-        await attachClip(session.id, i, audioBase64, mimeType);
-        done = true;
-      } catch (e) {
-        // Retry slow/timeout/rate-limit/5xx — only give up on a clear
-        // client error (bad/oversized input) or after all attempts.
-        const clientError = e.status === 400 || e.status === 413;
-        if (!clientError && attempt < 4) {
-          await sleep(backoff[attempt]);
-          continue;
-        }
-        throw e;
-      }
-    }
-    onProgress(i + 1, list.length);
-    if (i < list.length - 1) await sleep(800); // gentle spacing
-  }
-}
-
-// Step 1: pick/take a photo -> OCR.
+// Step 1: pick/take a photo -> OCR (Gemini, via relay).
 // Step 2: review & edit the recognized English.
-// Step 3: save -> generate audio -> open the player.
-
+// Step 3: save (instant — audio is spoken on-device, nothing to generate).
 export default function CaptureScreen({ onDone, onCancel }) {
-  const [stage, setStage] = useState('pick'); // pick | ocr | review | saving | preparing
+  const [stage, setStage] = useState('pick'); // pick | ocr | review | saving
   const [text, setText] = useState('');
-  const [sentences, setSentences] = useState([]);
-  const [prog, setProg] = useState({ done: 0, total: 0 });
 
   async function handleImage(asset) {
     try {
@@ -63,7 +30,6 @@ export default function CaptureScreen({ onDone, onCancel }) {
         return;
       }
       setText(result.text);
-      setSentences(result.sentences || []);
       setStage('review');
     } catch (e) {
       Alert.alert('読み取り失敗', String(e.message || e));
@@ -96,48 +62,26 @@ export default function CaptureScreen({ onDone, onCancel }) {
       Alert.alert('テキストが空', '保存する英文を入れてね。');
       return;
     }
-    let session = null;
     try {
       setStage('saving');
-      const list = splitSentences(clean);
-      session = await saveSession({ text: clean, sentences: list });
-      setProg({ done: 0, total: list.length });
-      setStage('preparing');
-      await prepareAudio(session, list, (done, total) => setProg({ done, total }));
+      const session = await saveSession({
+        text: clean,
+        sentences: splitSentences(clean),
+      });
       onDone(session);
     } catch (e) {
-      if (session) await deleteSession(session.id); // remove the half-made one
-      Alert.alert(
-        '音声の準備に失敗',
-        '通信環境を確認して、もう一度試してね。\n' + String(e.message || e),
-      );
+      Alert.alert('保存に失敗', String(e.message || e));
       setStage('review');
     }
   }
 
-  if (stage === 'ocr' || stage === 'saving' || stage === 'preparing') {
-    const pct = prog.total ? Math.round((prog.done / prog.total) * 100) : 0;
+  if (stage === 'ocr' || stage === 'saving') {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#374151" />
-        {stage === 'preparing' ? (
-          <>
-            <Text style={styles.muted}>
-              音声を準備中…  {prog.done} / {prog.total}
-            </Text>
-            <View style={styles.barTrack}>
-              <View style={[styles.barFill, { width: `${pct}%` }]} />
-            </View>
-            <Text style={styles.caption}>
-              一度きりの準備です。終わると、何度リピートしても{'\n'}
-              止まらずオフラインで再生できます。
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.muted}>
-            {stage === 'ocr' ? '文字を読み取り中…' : '保存中…'}
-          </Text>
-        )}
+        <Text style={styles.muted}>
+          {stage === 'ocr' ? '文字を読み取り中…' : '保存中…'}
+        </Text>
       </View>
     );
   }
@@ -193,12 +137,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   heading: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 6 },
   muted: { fontSize: 15, color: '#6b7280' },
-  barTrack: {
-    width: 220, height: 8, borderRadius: 4, backgroundColor: '#f3f4f6',
-    overflow: 'hidden',
-  },
-  barFill: { height: 8, borderRadius: 4, backgroundColor: '#374151' },
-  caption: { fontSize: 12, color: '#9ca3af', textAlign: 'center', lineHeight: 18 },
   editorWrap: { flex: 1, marginVertical: 16 },
   editor: {
     minHeight: 240, fontSize: 18, lineHeight: 28, color: '#111827',
