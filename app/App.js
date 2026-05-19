@@ -10,7 +10,7 @@ export default function App() {
   const [screen, setScreen] = useState('library'); // 'library' | 'capture' | 'player'
   const [sessions, setSessions] = useState([]);
   const [active, setActive] = useState(null);
-  const [speed, setSpeed] = useState(1.0);
+  const [speed, setSpeed] = useState(0.75); // 0.75 = natural pace (see PlayerScreen)
 
   // Play even when the phone's silent switch is on — this is a listening app.
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function App() {
 
   function openSession(session) {
     setActive(session);
-    setSpeed(1.0);
+    setSpeed(0.75);
     setScreen('player');
   }
 

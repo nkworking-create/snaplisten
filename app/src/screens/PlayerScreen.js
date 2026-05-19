@@ -7,6 +7,14 @@ import * as Speech from 'expo-speech';
 import { deleteSession } from '../storage';
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+// Calibration: the 0.75 button = a natural "normal" speaking pace.
+// Other steps scale relative to it. If "normal" still sounds a touch
+// fast/slow on the device, nudge SPEECH_BASE_RATE (the only knob).
+const NORMAL_AT = 0.75;
+const SPEECH_BASE_RATE = 1.0; // expo-speech rate that sounds normal
+const toRate = (displayed) => (displayed / NORMAL_AT) * SPEECH_BASE_RATE;
+
 const FG = '#374151';
 const BG = '#f3f4f6';
 
@@ -45,7 +53,7 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
     Speech.stop();
     Speech.speak(sentences[i], {
       language: 'en-US',
-      rate: speedRef.current,
+      rate: toRate(speedRef.current),
       onDone: () => {
         if (myToken !== tokenRef.current) return; // superseded
         const through = behRef.current === 'through';
