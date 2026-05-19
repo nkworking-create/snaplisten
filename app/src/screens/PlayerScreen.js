@@ -8,10 +8,10 @@ import { deleteSession } from '../storage';
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
-// Calibration: the 0.75 button = a natural "normal" speaking pace.
+// Calibration: the 1.00 button = the natural "normal" speaking pace.
 // Other steps scale relative to it. If "normal" still sounds a touch
 // fast/slow on the device, nudge SPEECH_BASE_RATE (the only knob).
-const NORMAL_AT = 0.75;
+const NORMAL_AT = 1.0;
 const SPEECH_BASE_RATE = 1.0; // expo-speech rate that sounds normal
 const toRate = (displayed) => (displayed / NORMAL_AT) * SPEECH_BASE_RATE;
 
