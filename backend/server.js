@@ -35,7 +35,7 @@ const PORT = process.env.PORT || 8787;
 const APP_SECRET = process.env.APP_SECRET || '';
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const OCR_DAILY = Number(process.env.OCR_DAILY || 60);
-const TTS_DAILY = Number(process.env.TTS_DAILY || 60);
+const TTS_DAILY = Number(process.env.TTS_DAILY || 400); // per-sentence model = many calls per save
 const MAX_IMAGE_BYTES = Number(process.env.MAX_IMAGE_BYTES || 8 * 1024 * 1024);
 const MAX_TTS_CHARS = Number(process.env.MAX_TTS_CHARS || 1500);
 const BLOCKED = new Set(

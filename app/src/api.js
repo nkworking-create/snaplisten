@@ -37,7 +37,10 @@ async function authedPost(path, payload) {
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(friendly(res.status, err));
+    const e = new Error(friendly(res.status, err));
+    e.code = err.error;     // e.g. 'tts_quota'
+    e.status = res.status;  // e.g. 429
+    throw e;
   }
   return res.json();
 }
