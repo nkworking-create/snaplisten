@@ -46,6 +46,18 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const quotaHit = (err) => /\b429\b|quota|RESOURCE_EXHAUSTED/i.test(String(err && err.message));
 
+// fetch with a hard timeout so an upstream hang fails fast and we can
+// retry/return instead of holding the phone's request until it times out.
+async function fetchT(url, opts, ms = 25000) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ac.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // --- abuse guard: per-install daily quota (in-memory) ------------------
 // In-memory is fine at launch scale (single Render instance). It resets
 // on restart/redeploy — acceptable now; move to a store when traffic grows.
@@ -116,7 +128,7 @@ const OCR_PROMPT = [
 async function callGemini(model, imageBase64, mimeType) {
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-  const res = await fetch(url, {
+  const res = await fetchT(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -167,7 +179,7 @@ app.post('/ocr', callLimiter, requireToken, async (req, res) => {
 
   let lastErr = null;
   for (const model of GEMINI_MODELS) {
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
         return res.json(await callGemini(model, imageBase64, mimeType));
       } catch (err) {
@@ -207,7 +219,7 @@ async function callGeminiTts(text) {
   const model = 'gemini-2.5-flash-preview-tts';
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-  const res = await fetch(url, {
+  const res = await fetchT(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -238,7 +250,7 @@ async function callElevenLabs(text, voiceId) {
   const voice = voiceId || ELEVENLABS_VOICE_ID;
   const url =
     `https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`;
-  const r = await fetch(url, {
+  const r = await fetchT(url, {
     method: 'POST',
     headers: {
       'xi-api-key': ELEVENLABS_API_KEY,
@@ -276,7 +288,7 @@ app.post('/tts', callLimiter, requireToken, async (req, res) => {
   console.log(`tts  install=${req.installId.slice(0, 8)} ${gate.count}/${gate.limit} provider=${provider}`);
 
   let lastErr = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const out =
         provider === 'elevenlabs'
@@ -316,7 +328,7 @@ app.post('/tts-batch', callLimiter, requireToken, async (req, res) => {
 
   const one = async (t) => {
     let lastErr = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
         return provider === 'elevenlabs'
           ? await callElevenLabs(t, req.body?.voiceId)

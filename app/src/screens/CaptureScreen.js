@@ -28,8 +28,10 @@ async function prepareAudio(session, list, onProgress) {
         await attachClip(session.id, i, audioBase64, mimeType);
         done = true;
       } catch (e) {
-        const rateLimited = e.status === 429 || e.code === 'tts_quota';
-        if (rateLimited && attempt < 4) {
+        // Retry slow/timeout/rate-limit/5xx — only give up on a clear
+        // client error (bad/oversized input) or after all attempts.
+        const clientError = e.status === 400 || e.status === 413;
+        if (!clientError && attempt < 4) {
           await sleep(backoff[attempt]);
           continue;
         }
