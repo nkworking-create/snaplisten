@@ -4,7 +4,7 @@ import { setAudioModeAsync } from 'expo-audio';
 import LibraryScreen from './src/screens/LibraryScreen';
 import CaptureScreen from './src/screens/CaptureScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
-import { listSessions } from './src/storage';
+import { listSessions, renameSession } from './src/storage';
 
 export default function App() {
   const [screen, setScreen] = useState('library'); // 'library' | 'capture' | 'player'
@@ -40,6 +40,11 @@ export default function App() {
     openSession(session);
   }
 
+  async function handleRename(id, title) {
+    await renameSession(id, title);
+    await refresh();
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
@@ -48,6 +53,7 @@ export default function App() {
           sessions={sessions}
           onOpen={openSession}
           onNew={() => setScreen('capture')}
+          onRename={handleRename}
         />
       )}
       {screen === 'capture' && (

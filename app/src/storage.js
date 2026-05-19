@@ -15,14 +15,15 @@ async function writeIndex(list) {
   await AsyncStorage.setItem(INDEX_KEY, JSON.stringify(list));
 }
 
-export async function saveSession({ text, sentences }) {
-  const id = String(Date.now());
-  const title =
-    (text || '').trim().slice(0, 48).replace(/\s+/g, ' ') || 'Untitled';
+function autoTitle(text) {
+  return (text || '').trim().slice(0, 48).replace(/\s+/g, ' ') || 'Untitled';
+}
 
+export async function saveSession({ text, sentences, title }) {
+  const id = String(Date.now());
   const session = {
     id,
-    title,
+    title: (title || '').trim() || autoTitle(text),
     text: text || '',
     sentences: sentences || [],
     createdAt: Date.now(),
@@ -30,6 +31,15 @@ export async function saveSession({ text, sentences }) {
 
   await writeIndex([session, ...(await listSessions())]);
   return session;
+}
+
+export async function renameSession(id, title) {
+  const list = await listSessions();
+  const s = list.find((x) => x.id === id);
+  if (s) {
+    s.title = (title || '').trim() || autoTitle(s.text);
+    await writeIndex(list);
+  }
 }
 
 export async function deleteSession(id) {
