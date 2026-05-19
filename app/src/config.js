@@ -13,6 +13,12 @@ import Constants from 'expo-constants';
 const MANUAL_RELAY_URL = ''; // e.g. 'https://snaplisten-relay.onrender.com'
 const BACKEND_PORT = 8787;
 
+// Light auth gate. Must match the server's APP_SECRET env in production.
+// Leave '' for local dev (server then skips the check). This is the
+// intentionally-light tier — it stops casual abuse, not a determined
+// attacker; the real cost ceiling is the server-side daily caps.
+export const APP_SECRET = '';
+
 function devRelayUrl() {
   const hostUri =
     Constants.expoConfig?.hostUri ||
