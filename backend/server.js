@@ -291,6 +291,52 @@ app.post('/tts', callLimiter, requireToken, async (req, res) => {
   return res.status(502).json({ error: 'TTS failed', detail: lastErr?.message });
 });
 
+// Per-sentence audio so the app can loop one sentence at a time
+// (the core "repetition" drill). Counted as ONE tts quota unit per save.
+app.post('/tts-batch', callLimiter, requireToken, async (req, res) => {
+  const texts = (Array.isArray(req.body?.texts) ? req.body.texts : [])
+    .map((t) => String(t || '').trim())
+    .filter(Boolean);
+  if (!texts.length) return res.status(400).json({ error: 'texts is required' });
+  if (texts.length > 40) return res.status(413).json({ error: 'too_many_sentences', max: 40 });
+  if (texts.reduce((n, t) => n + t.length, 0) > MAX_TTS_CHARS * 8)
+    return res.status(413).json({ error: 'text_too_long' });
+
+  const provider = (req.body?.provider || TTS_PROVIDER).toLowerCase();
+  if (provider === 'elevenlabs' && !ELEVENLABS_API_KEY)
+    return res.status(500).json({ error: 'ELEVENLABS_API_KEY not set on server' });
+  if (provider !== 'elevenlabs' && !GEMINI_API_KEY)
+    return res.status(500).json({ error: 'GEMINI_API_KEY not set on server' });
+
+  const gate = consume(req.installId, 'tts');
+  if (!gate.ok) return res.status(429).json({ error: 'daily_limit', scope: 'tts', limit: gate.limit });
+  console.log(`ttsb install=${req.installId.slice(0, 8)} ${gate.count}/${gate.limit} n=${texts.length}`);
+
+  const one = async (t) => {
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return provider === 'elevenlabs'
+          ? await callElevenLabs(t, req.body?.voiceId)
+          : await callGeminiTts(t);
+      } catch (err) {
+        lastErr = err;
+        await sleep(400 * (attempt + 1));
+      }
+    }
+    throw lastErr;
+  };
+
+  try {
+    const clips = [];
+    for (const t of texts) clips.push({ text: t, ...(await one(t)) });
+    return res.json({ clips });
+  } catch (err) {
+    console.error('TTS batch failed:', err?.message);
+    return res.status(502).json({ error: 'TTS failed', detail: err?.message });
+  }
+});
+
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {

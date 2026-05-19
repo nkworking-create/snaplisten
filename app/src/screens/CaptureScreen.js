@@ -4,8 +4,14 @@ import {
   ActivityIndicator, ScrollView, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ocrImage, synthesize } from '../api';
+import { ocrImage, synthesizeSentences } from '../api';
 import { saveSession } from '../storage';
+
+// Split (possibly edited) text into sentences for per-sentence audio.
+function splitSentences(t) {
+  const parts = t.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  return parts.length ? parts : [t.trim()];
+}
 
 // Step 1: pick/take a photo -> OCR.
 // Step 2: review & edit the recognized English.
@@ -61,8 +67,8 @@ export default function CaptureScreen({ onDone, onCancel }) {
     }
     try {
       setStage('saving');
-      const { audioBase64, mimeType } = await synthesize(clean);
-      const session = await saveSession({ text: clean, sentences, audioBase64, mimeType });
+      const { clips } = await synthesizeSentences(splitSentences(clean));
+      const session = await saveSession({ text: clean, clips });
       onDone(session);
     } catch (e) {
       Alert.alert('音声の作成に失敗', String(e.message || e));

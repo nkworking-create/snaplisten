@@ -50,3 +50,8 @@ export function ocrImage(imageBase64, mimeType = 'image/jpeg') {
 export function synthesize(text) {
   return authedPost('/tts', { text }); // { audioBase64, mimeType }
 }
+
+// Sentences -> one audio clip each, so the app can loop a single sentence.
+export function synthesizeSentences(texts) {
+  return authedPost('/tts-batch', { texts }); // { clips: [{ text, audioBase64, mimeType }] }
+}
