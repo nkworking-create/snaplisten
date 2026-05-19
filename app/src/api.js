@@ -8,6 +8,7 @@ function friendly(status, err) {
     return '今日の読み取り上限に達しました。また明日試してね。';
   if (code === 'daily_limit' && err.scope === 'tts')
     return '今日の音声作成の上限に達しました。また明日試してね。';
+  if (code === 'tts_quota') return '音声サービスが混み合っています。少し時間をおいてもう一度試してね。';
   if (code === 'rate_limited') return 'アクセスが集中しています。少し待ってからもう一度。';
   if (code === 'too_many_registrations') return '登録の試行が多すぎます。少し待ってね。';
   if (code === 'image_too_large') return '画像が大きすぎます。別の写真で試してね。';

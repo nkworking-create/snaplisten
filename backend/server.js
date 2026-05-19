@@ -44,6 +44,7 @@ const BLOCKED = new Set(
 
 const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const quotaHit = (err) => /\b429\b|quota|RESOURCE_EXHAUSTED/i.test(String(err && err.message));
 
 // --- abuse guard: per-install daily quota (in-memory) ------------------
 // In-memory is fine at launch scale (single Render instance). It resets
@@ -288,6 +289,7 @@ app.post('/tts', callLimiter, requireToken, async (req, res) => {
     }
   }
   console.error('TTS failed:', lastErr?.message);
+  if (quotaHit(lastErr)) return res.status(429).json({ error: 'tts_quota' });
   return res.status(502).json({ error: 'TTS failed', detail: lastErr?.message });
 });
 
@@ -329,10 +331,14 @@ app.post('/tts-batch', callLimiter, requireToken, async (req, res) => {
 
   try {
     const clips = [];
-    for (const t of texts) clips.push({ text: t, ...(await one(t)) });
+    for (let i = 0; i < texts.length; i++) {
+      clips.push({ text: texts[i], ...(await one(texts[i])) });
+      if (i < texts.length - 1) await sleep(350); // ease provider RPM limits
+    }
     return res.json({ clips });
   } catch (err) {
     console.error('TTS batch failed:', err?.message);
+    if (quotaHit(err)) return res.status(429).json({ error: 'tts_quota' });
     return res.status(502).json({ error: 'TTS failed', detail: err?.message });
   }
 });
