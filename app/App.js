@@ -15,8 +15,12 @@ export default function App() {
 
   useEffect(() => {
     initLanguage();
-    // Audio session: keep playing through the silent switch.
-    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+    // Audio session: play through the silent switch AND keep going when
+    // the app is sent to the background or the screen is locked.
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+    }).catch(() => {});
   }, []);
 
   const refresh = useCallback(async () => {

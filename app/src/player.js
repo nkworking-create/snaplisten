@@ -15,7 +15,7 @@ let state = {
   session: null,
   index: null,
   speaking: false,
-  loop: true,
+  loop: false,
   speed: 1.0,
   behavior: 'auto', // 'auto' (respects loop) | 'through' (play to end)
 };

@@ -163,7 +163,7 @@ const listeners = new Set();
 
 export async function initLanguage() {
   const stored = await AsyncStorage.getItem(STORAGE_KEY);
-  currentLang = stored === 'ja' ? 'ja' : 'en';
+  currentLang = (stored === 'en' || stored === 'ja') ? stored : DEFAULT_LANG;
   listeners.forEach((fn) => fn(currentLang));
 }
 
