@@ -58,13 +58,9 @@ export default function SettingsScreen({ onBack }) {
         </View>
 
         <Text style={styles.sectionLabel}>{t('settings_pro')}</Text>
-        <View style={styles.card}>
-          <Text style={styles.teaser}>{t('settings_proTeaser')}</Text>
-          <TouchableOpacity style={styles.upgrade} onPress={comingSoon}>
-            <Text style={styles.upgradeText}>{t('settings_upgrade')}</Text>
-          </TouchableOpacity>
-          <View style={styles.sep} />
-          <LinkRow label={t('settings_restore')} onPress={comingSoon} />
+        <View style={[styles.card, styles.cardDim]} pointerEvents="none">
+          <Text style={styles.comingSoonBig}>{t('comingSoonTitle')}</Text>
+          <Text style={styles.comingSoonSub}>{t('settings_proTeaser')}</Text>
         </View>
 
         <Text style={styles.sectionLabel}>{t('settings_about')}</Text>
@@ -96,10 +92,13 @@ const styles = StyleSheet.create({
   rowLabel: { color: '#111827', fontSize: 16 },
   rowValue: { color: MUTED, fontSize: 15 },
   sep: { height: 1, backgroundColor: '#e5e7eb' },
-  teaser: { color: MUTED, fontSize: 14, padding: 16, lineHeight: 20 },
-  upgrade: {
-    backgroundColor: FG, marginHorizontal: 16, marginBottom: 14,
-    paddingVertical: 12, borderRadius: 10, alignItems: 'center',
+  cardDim: { opacity: 0.55 },
+  comingSoonBig: {
+    color: FG, fontSize: 17, fontWeight: '700',
+    paddingHorizontal: 16, paddingTop: 16,
   },
-  upgradeText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  comingSoonSub: {
+    color: MUTED, fontSize: 13, lineHeight: 19,
+    paddingHorizontal: 16, paddingTop: 4, paddingBottom: 16,
+  },
 });
