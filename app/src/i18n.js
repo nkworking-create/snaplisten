@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Minimal i18n. Default language is English; Japanese is opt-in via settings.
 // Adding another language = add another block to STRINGS.
 
-const STORAGE_KEY = 'snaplisten.lang';
+const STORAGE_KEY = 'snaplisten.lang.v2'; // bumped: forget pre-fix 'en' preferences
 const DEFAULT_LANG = 'ja';
 
 const STRINGS = {
