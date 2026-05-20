@@ -4,16 +4,18 @@ import { setAudioModeAsync } from 'expo-audio';
 import LibraryScreen from './src/screens/LibraryScreen';
 import CaptureScreen from './src/screens/CaptureScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import { listSessions, renameSession } from './src/storage';
+import { initLanguage } from './src/i18n';
 
 export default function App() {
-  const [screen, setScreen] = useState('library'); // 'library' | 'capture' | 'player'
+  const [screen, setScreen] = useState('library'); // library | capture | player | settings
   const [sessions, setSessions] = useState([]);
   const [active, setActive] = useState(null);
   const [speed, setSpeed] = useState(1.0); // 1.0 = natural pace (see PlayerScreen)
 
-  // Play even when the phone's silent switch is on — this is a listening app.
   useEffect(() => {
+    initLanguage();
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
   }, []);
 
@@ -54,6 +56,7 @@ export default function App() {
           onOpen={openSession}
           onNew={() => setScreen('capture')}
           onRename={handleRename}
+          onSettings={() => setScreen('settings')}
         />
       )}
       {screen === 'capture' && (
@@ -70,6 +73,9 @@ export default function App() {
           onBack={() => setScreen('library')}
           onDeleted={afterDelete}
         />
+      )}
+      {screen === 'settings' && (
+        <SettingsScreen onBack={() => setScreen('library')} />
       )}
     </SafeAreaView>
   );

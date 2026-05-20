@@ -2,34 +2,47 @@ import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { t, useLanguage } from '../i18n';
 
-export default function LibraryScreen({ sessions, onOpen, onNew, onRename }) {
+export default function LibraryScreen({ sessions, onOpen, onNew, onRename, onSettings }) {
+  useLanguage(); // re-render on language change
+
   function renameItem(item) {
     if (Alert.prompt) {
       Alert.prompt(
-        'タイトルを変更',
+        t('renamePromptTitle'),
         null,
         [
-          { text: 'やめる', style: 'cancel' },
-          { text: '保存', onPress: (v) => v != null && onRename(item.id, v) },
+          { text: t('cancel'), style: 'cancel' },
+          { text: t('renameSave'), onPress: (v) => v != null && onRename(item.id, v) },
         ],
         'plain-text',
         item.title,
       );
     } else {
-      Alert.alert('未対応', 'この端末ではタイトル変更に未対応です。');
+      Alert.alert(t('renameUnsupported'), t('renameUnsupportedMsg'));
     }
   }
 
   return (
     <View style={styles.flex}>
-      <Text style={styles.title}>SnapListen</Text>
-      <Text style={styles.subtitle}>撮った英文を、聴いて繰り返す。</Text>
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>{t('appTitle')}</Text>
+          <Text style={styles.subtitle}>{t('appSubtitle')}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={onSettings}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="settings-outline" size={24} color="#374151" />
+        </TouchableOpacity>
+      </View>
 
       {sessions.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>まだセッションがありません。</Text>
-          <Text style={styles.emptyText}>下のボタンから英文を取り込もう。</Text>
+          <Text style={styles.emptyText}>{t('emptyLine1')}</Text>
+          <Text style={styles.emptyText}>{t('emptyLine2')}</Text>
         </View>
       ) : (
         <FlatList
@@ -57,7 +70,7 @@ export default function LibraryScreen({ sessions, onOpen, onNew, onRename }) {
       )}
 
       <TouchableOpacity style={styles.fab} onPress={onNew}>
-        <Text style={styles.fabText}>＋  新規（撮る / 選ぶ）</Text>
+        <Text style={styles.fabText}>{t('newButton')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -65,6 +78,7 @@ export default function LibraryScreen({ sessions, onOpen, onNew, onRename }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, padding: 24, paddingTop: 16 },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start' },
   title: { fontSize: 28, fontWeight: '800', color: '#111827' },
   subtitle: { fontSize: 15, color: '#6b7280', marginTop: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },

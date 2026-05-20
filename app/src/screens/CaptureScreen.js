@@ -6,20 +6,21 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { ocrImage } from '../api';
 import { saveSession } from '../storage';
+import { t, useLanguage } from '../i18n';
 
-// Split (possibly edited) text into sentences for the loop drill.
-function splitSentences(t) {
-  const parts = t.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
-  return parts.length ? parts : [t.trim()];
+function splitSentences(text) {
+  const parts = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  return parts.length ? parts : [text.trim()];
 }
 
-function suggestTitle(t) {
-  const first = splitSentences(t)[0] || t.trim();
+function suggestTitle(text) {
+  const first = splitSentences(text)[0] || text.trim();
   return first.slice(0, 40).replace(/\s+/g, ' ');
 }
 
 // pick -> ocr -> review (edit text) -> title (name it) -> save (instant).
 export default function CaptureScreen({ onDone, onCancel }) {
+  useLanguage();
   const [stage, setStage] = useState('pick');
   const [text, setText] = useState('');
   const [title, setTitle] = useState('');
@@ -29,14 +30,14 @@ export default function CaptureScreen({ onDone, onCancel }) {
       setStage('ocr');
       const result = await ocrImage(asset.base64, asset.mimeType || 'image/jpeg');
       if (!result.text) {
-        Alert.alert('英文が見つからなかった', 'もう一度、はっきり写った写真で試して。');
+        Alert.alert(t('notFoundTitle'), t('notFoundMsg'));
         setStage('pick');
         return;
       }
       setText(result.text);
       setStage('review');
     } catch (e) {
-      Alert.alert('読み取り失敗', String(e.message || e));
+      Alert.alert(t('readFail'), String(e.message || e));
       setStage('pick');
     }
   }
@@ -44,7 +45,7 @@ export default function CaptureScreen({ onDone, onCancel }) {
   async function takePhoto() {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('カメラ権限が必要', '設定からカメラを許可してね。');
+      Alert.alert(t('cameraPermNeeded'), t('cameraPermAsk'));
       return;
     }
     const r = await ImagePicker.launchCameraAsync({
@@ -63,7 +64,7 @@ export default function CaptureScreen({ onDone, onCancel }) {
   function goToTitle() {
     const clean = text.trim();
     if (!clean) {
-      Alert.alert('テキストが空', '保存する英文を入れてね。');
+      Alert.alert(t('emptyTextTitle'), t('emptyTextMsg'));
       return;
     }
     Keyboard.dismiss();
@@ -82,7 +83,7 @@ export default function CaptureScreen({ onDone, onCancel }) {
       });
       onDone(session);
     } catch (e) {
-      Alert.alert('保存に失敗', String(e.message || e));
+      Alert.alert(t('saveFail'), String(e.message || e));
       setStage('title');
     }
   }
@@ -92,7 +93,7 @@ export default function CaptureScreen({ onDone, onCancel }) {
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#374151" />
         <Text style={styles.muted}>
-          {stage === 'ocr' ? '文字を読み取り中…' : '保存中…'}
+          {stage === 'ocr' ? t('ocrLoading') : t('saving')}
         </Text>
       </View>
     );
@@ -102,7 +103,7 @@ export default function CaptureScreen({ onDone, onCancel }) {
     return (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={styles.flex}>
-          <Text style={styles.heading}>読み取り結果（直せるよ）</Text>
+          <Text style={styles.heading}>{t('review_heading')}</Text>
           <ScrollView style={styles.editorWrap} keyboardShouldPersistTaps="handled">
             <TextInput
               style={styles.editor}
@@ -110,15 +111,15 @@ export default function CaptureScreen({ onDone, onCancel }) {
               onChangeText={setText}
               multiline
               textAlignVertical="top"
-              placeholder="認識された英文がここに出ます"
+              placeholder={t('placeholder_text')}
             />
           </ScrollView>
           <View style={styles.row}>
             <TouchableOpacity style={[styles.btn, styles.ghost]} onPress={() => setStage('pick')}>
-              <Text style={styles.ghostText}>やり直す</Text>
+              <Text style={styles.ghostText}>{t('redo')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.btn, styles.primary]} onPress={goToTitle}>
-              <Text style={styles.primaryText}>次へ</Text>
+              <Text style={styles.primaryText}>{t('next')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -130,23 +131,23 @@ export default function CaptureScreen({ onDone, onCancel }) {
     return (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={styles.flex}>
-          <Text style={styles.heading}>タイトルをつけよう</Text>
-          <Text style={styles.muted}>ライブラリに表示される名前です。</Text>
+          <Text style={styles.heading}>{t('title_heading')}</Text>
+          <Text style={styles.muted}>{t('title_subtitle')}</Text>
           <TextInput
             style={styles.titleInput}
             value={title}
             onChangeText={setTitle}
-            placeholder="タイトル"
+            placeholder={t('titlePlaceholder')}
             returnKeyType="done"
             onSubmitEditing={Keyboard.dismiss}
           />
           <View style={{ flex: 1 }} />
           <View style={styles.row}>
             <TouchableOpacity style={[styles.btn, styles.ghost]} onPress={() => setStage('review')}>
-              <Text style={styles.ghostText}>戻る</Text>
+              <Text style={styles.ghostText}>{t('back')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.btn, styles.primary]} onPress={save}>
-              <Text style={styles.primaryText}>保存して聴く</Text>
+              <Text style={styles.primaryText}>{t('saveAndListen')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -157,18 +158,18 @@ export default function CaptureScreen({ onDone, onCancel }) {
   // stage === 'pick'
   return (
     <View style={styles.flex}>
-      <Text style={styles.heading}>英文を取り込む</Text>
+      <Text style={styles.heading}>{t('pick_heading')}</Text>
       <View style={{ height: 24 }} />
       <TouchableOpacity style={[styles.btn, styles.primary]} onPress={takePhoto}>
-        <Text style={styles.primaryText}>カメラで撮る</Text>
+        <Text style={styles.primaryText}>{t('takePhoto')}</Text>
       </TouchableOpacity>
       <View style={{ height: 12 }} />
       <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={pickPhoto}>
-        <Text style={styles.secondaryText}>写真から選ぶ</Text>
+        <Text style={styles.secondaryText}>{t('pickPhoto')}</Text>
       </TouchableOpacity>
       <View style={{ height: 24 }} />
       <TouchableOpacity onPress={onCancel}>
-        <Text style={styles.link}>← ライブラリに戻る</Text>
+        <Text style={styles.link}>{t('cancelLink')}</Text>
       </TouchableOpacity>
     </View>
   );

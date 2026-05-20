@@ -5,6 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { deleteSession } from '../storage';
+import { t, useLanguage } from '../i18n';
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
@@ -21,9 +22,10 @@ const BG = '#f3f4f6';
 // Audio is spoken on-device: free, offline, unlimited, instant.
 // Repeat ON  + tap sentence -> that sentence repeats.
 // Repeat OFF + tap sentence -> plays from there onward.
-// "通し再生" -> from the first sentence onward (regardless of repeat).
+// "Play all" -> from the first sentence onward (regardless of repeat).
 // The sentence being spoken is always highlighted.
 export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpeed }) {
+  useLanguage();
   const sentences = session.sentences || [];
   const [mode, setMode] = useState(null); // active sentence index | null
   const [loop, setLoop] = useState(true);
@@ -31,8 +33,8 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
 
   const loopRef = useRef(loop);
   const speedRef = useRef(speed);
-  const behRef = useRef('auto'); // 'auto' (follow repeat toggle) | 'through'
-  const tokenRef = useRef(0);    // invalidates stale speech callbacks
+  const behRef = useRef('auto'); // 'auto' | 'through'
+  const tokenRef = useRef(0);
   useEffect(() => { loopRef.current = loop; }, [loop]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
 
@@ -42,7 +44,6 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
     setSpeaking(false);
   }
 
-  // Stop speaking if we leave the screen.
   useEffect(() => () => { tokenRef.current += 1; Speech.stop(); }, []);
 
   function speakIndex(i) {
@@ -55,12 +56,12 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
       language: 'en-US',
       rate: toRate(speedRef.current),
       onDone: () => {
-        if (myToken !== tokenRef.current) return; // superseded
+        if (myToken !== tokenRef.current) return;
         const through = behRef.current === 'through';
         if (!through && loopRef.current) {
-          speakIndex(i); // repeat this sentence
+          speakIndex(i);
         } else if (i + 1 < sentences.length) {
-          speakIndex(i + 1); // continue onward
+          speakIndex(i + 1);
         } else {
           setSpeaking(false);
         }
@@ -91,10 +92,10 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
   }
 
   function confirmDelete() {
-    Alert.alert('削除する？', 'このセッションを消します。', [
-      { text: 'やめる', style: 'cancel' },
+    Alert.alert(t('deleteConfirmTitle'), t('deleteConfirmMsg'), [
+      { text: t('cancel'), style: 'cancel' },
       {
-        text: '削除', style: 'destructive',
+        text: t('deleteAction'), style: 'destructive',
         onPress: async () => {
           stopSpeech();
           await deleteSession(session.id);
@@ -113,13 +114,13 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
     return (
       <View style={styles.flex}>
         <TouchableOpacity onPress={back}>
-          <Text style={styles.link}>← ライブラリ</Text>
+          <Text style={styles.link}>{t('backToLibrary')}</Text>
         </TouchableOpacity>
         <View style={{ flex: 1, justifyContent: 'center' }}>
-          <Text style={styles.empty}>文がありません。撮り直してね。</Text>
+          <Text style={styles.empty}>{t('noSentences')}</Text>
         </View>
         <TouchableOpacity onPress={confirmDelete} style={styles.deleteWrap}>
-          <Text style={styles.delete}>このセッションを削除</Text>
+          <Text style={styles.delete}>{t('deleteSession')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -128,9 +129,9 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
   return (
     <View style={styles.flex}>
       <TouchableOpacity onPress={back}>
-        <Text style={styles.link}>← ライブラリ</Text>
+        <Text style={styles.link}>{t('backToLibrary')}</Text>
       </TouchableOpacity>
-      <Text style={styles.hint}>文をタップ＝その文を再生</Text>
+      <Text style={styles.hint}>{t('playerHint')}</Text>
 
       <ScrollView style={styles.list} contentContainerStyle={{ paddingVertical: 12 }}>
         {sentences.map((s, i) => (
@@ -162,10 +163,10 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
       </View>
 
       <TouchableOpacity style={styles.allBtn} onPress={playAll}>
-        <Text style={styles.allText}>最初から通し再生</Text>
+        <Text style={styles.allText}>{t('playAll')}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={confirmDelete} style={styles.deleteWrap}>
-        <Text style={styles.delete}>このセッションを削除</Text>
+        <Text style={styles.delete}>{t('deleteSession')}</Text>
       </TouchableOpacity>
     </View>
   );
