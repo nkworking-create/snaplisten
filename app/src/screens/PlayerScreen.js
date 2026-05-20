@@ -1,94 +1,38 @@
-import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Speech from 'expo-speech';
 import { deleteSession } from '../storage';
 import { t, useLanguage } from '../i18n';
-
-const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-
-// Calibration: the 1.00 button = the natural "normal" speaking pace.
-// Other steps scale relative to it. If "normal" still sounds a touch
-// fast/slow on the device, nudge SPEECH_BASE_RATE (the only knob).
-const NORMAL_AT = 1.0;
-const SPEECH_BASE_RATE = 1.0; // expo-speech rate that sounds normal
-const toRate = (displayed) => (displayed / NORMAL_AT) * SPEECH_BASE_RATE;
+import {
+  usePlayer, tapSentence, playAll, togglePlay,
+  setLoop, cycleSpeed, stopPlayback, clearIfDeleted,
+} from '../player';
 
 const FG = '#374151';
 const BG = '#f3f4f6';
 
-// Audio is spoken on-device: free, offline, unlimited, instant.
-// Repeat ON  + tap sentence -> that sentence repeats.
-// Repeat OFF + tap sentence -> plays from there onward.
-// "Play all" -> from the first sentence onward (regardless of repeat).
-// The sentence being spoken is always highlighted.
-export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpeed }) {
+export default function PlayerScreen({ session, onBack, onDeleted }) {
   useLanguage();
+  const player = usePlayer();
   const sentences = session.sentences || [];
-  const [mode, setMode] = useState(null); // active sentence index | null
-  const [loop, setLoop] = useState(true);
-  const [speaking, setSpeaking] = useState(false);
 
-  const loopRef = useRef(loop);
-  const speedRef = useRef(speed);
-  const behRef = useRef('auto'); // 'auto' | 'through'
-  const tokenRef = useRef(0);
-  useEffect(() => { loopRef.current = loop; }, [loop]);
-  useEffect(() => { speedRef.current = speed; }, [speed]);
+  // "This session is what's currently playing" -> drives highlight + play icon.
+  const isMine = player.session?.id === session.id;
+  const activeIndex = isMine ? player.index : null;
+  const speaking = isMine && player.speaking;
 
-  function stopSpeech() {
-    tokenRef.current += 1;
-    Speech.stop();
-    setSpeaking(false);
+  function onTapSentence(i) {
+    tapSentence(session, i);
   }
 
-  useEffect(() => () => { tokenRef.current += 1; Speech.stop(); }, []);
-
-  function speakIndex(i) {
-    if (i < 0 || i >= sentences.length) return;
-    const myToken = ++tokenRef.current;
-    setMode(i);
-    setSpeaking(true);
-    Speech.stop();
-    Speech.speak(sentences[i], {
-      language: 'en-US',
-      rate: toRate(speedRef.current),
-      onDone: () => {
-        if (myToken !== tokenRef.current) return;
-        const through = behRef.current === 'through';
-        if (!through && loopRef.current) {
-          speakIndex(i);
-        } else if (i + 1 < sentences.length) {
-          speakIndex(i + 1);
-        } else {
-          setSpeaking(false);
-        }
-      },
-      onError: () => { if (myToken === tokenRef.current) setSpeaking(false); },
-    });
+  function onTogglePlay() {
+    if (isMine) togglePlay();
+    else playAll(session);
   }
 
-  function tapSentence(i) {
-    behRef.current = 'auto';
-    speakIndex(i);
-  }
-
-  function playAll() {
-    behRef.current = 'through';
-    speakIndex(0);
-  }
-
-  function togglePlay() {
-    if (speaking) { stopSpeech(); return; }
-    if (mode == null) { playAll(); return; }
-    behRef.current = 'auto';
-    speakIndex(mode);
-  }
-
-  function cycleSpeed() {
-    setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]);
+  function onPlayAll() {
+    playAll(session);
   }
 
   function confirmDelete() {
@@ -97,7 +41,7 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
       {
         text: t('deleteAction'), style: 'destructive',
         onPress: async () => {
-          stopSpeech();
+          clearIfDeleted(session.id);
           await deleteSession(session.id);
           onDeleted();
         },
@@ -105,15 +49,10 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
     ]);
   }
 
-  function back() {
-    stopSpeech();
-    onBack();
-  }
-
   if (sentences.length === 0) {
     return (
       <View style={styles.flex}>
-        <TouchableOpacity onPress={back}>
+        <TouchableOpacity onPress={onBack}>
           <Text style={styles.link}>{t('backToLibrary')}</Text>
         </TouchableOpacity>
         <View style={{ flex: 1, justifyContent: 'center' }}>
@@ -128,7 +67,7 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
 
   return (
     <View style={styles.flex}>
-      <TouchableOpacity onPress={back}>
+      <TouchableOpacity onPress={onBack}>
         <Text style={styles.link}>{t('backToLibrary')}</Text>
       </TouchableOpacity>
       <Text style={styles.hint}>{t('playerHint')}</Text>
@@ -137,10 +76,10 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
         {sentences.map((s, i) => (
           <TouchableOpacity
             key={i}
-            style={[styles.row, i === mode && styles.rowActive]}
-            onPress={() => tapSentence(i)}
+            style={[styles.row, i === activeIndex && styles.rowActive]}
+            onPress={() => onTapSentence(i)}
           >
-            <Text style={[styles.sentence, i === mode && styles.sentenceActive]}>
+            <Text style={[styles.sentence, i === activeIndex && styles.sentenceActive]}>
               {s}
             </Text>
           </TouchableOpacity>
@@ -149,20 +88,20 @@ export default function PlayerScreen({ session, onBack, onDeleted, speed, setSpe
 
       <View style={styles.controls}>
         <TouchableOpacity style={styles.smallBtn} onPress={cycleSpeed}>
-          <Text style={styles.smallText}>{speed.toFixed(2)}×</Text>
+          <Text style={styles.smallText}>{player.speed.toFixed(2)}×</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.playBtn} onPress={togglePlay}>
+        <TouchableOpacity style={styles.playBtn} onPress={onTogglePlay}>
           <Ionicons name={speaking ? 'pause' : 'play'} size={30} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.smallBtn, loop && styles.smallBtnOn]}
-          onPress={() => setLoop((v) => !v)}
+          style={[styles.smallBtn, player.loop && styles.smallBtnOn]}
+          onPress={() => setLoop(!player.loop)}
         >
-          <Ionicons name="repeat" size={24} color={loop ? '#fff' : FG} />
+          <Ionicons name="repeat" size={24} color={player.loop ? '#fff' : FG} />
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.allBtn} onPress={playAll}>
+      <TouchableOpacity style={styles.allBtn} onPress={onPlayAll}>
         <Text style={styles.allText}>{t('playAll')}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={confirmDelete} style={styles.deleteWrap}>

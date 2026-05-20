@@ -12,10 +12,10 @@ export default function App() {
   const [screen, setScreen] = useState('library'); // library | capture | player | settings
   const [sessions, setSessions] = useState([]);
   const [active, setActive] = useState(null);
-  const [speed, setSpeed] = useState(1.0); // 1.0 = natural pace (see PlayerScreen)
 
   useEffect(() => {
     initLanguage();
+    // Audio session: keep playing through the silent switch.
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
   }, []);
 
@@ -27,7 +27,6 @@ export default function App() {
 
   function openSession(session) {
     setActive(session);
-    setSpeed(1.0);
     setScreen('player');
   }
 
@@ -68,8 +67,6 @@ export default function App() {
       {screen === 'player' && active && (
         <PlayerScreen
           session={active}
-          speed={speed}
-          setSpeed={setSpeed}
           onBack={() => setScreen('library')}
           onDeleted={afterDelete}
         />

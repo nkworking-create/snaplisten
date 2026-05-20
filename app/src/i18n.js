@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Adding another language = add another block to STRINGS.
 
 const STORAGE_KEY = 'snaplisten.lang';
-const DEFAULT_LANG = 'en';
+const DEFAULT_LANG = 'ja';
 
 const STRINGS = {
   en: {
@@ -63,7 +63,7 @@ const STRINGS = {
     settings_title: 'Settings',
     settings_language: 'Language',
     settings_pro: 'Pro',
-    settings_proTeaser: 'Coming soon: natural human voices (ElevenLabs).',
+    settings_proTeaser: 'Coming soon: natural human voices.',
     settings_upgrade: 'Upgrade to Pro',
     settings_restore: 'Restore purchases',
     settings_about: 'About',
@@ -72,6 +72,12 @@ const STRINGS = {
     settings_contact: 'Contact',
     comingSoonTitle: 'Coming soon',
     comingSoonMsg: 'This will be available in a future update.',
+
+    nowPlaying: 'Now playing',
+    a11y_prev: 'Previous sentence',
+    a11y_next: 'Next sentence',
+    a11y_playPause: 'Play / pause',
+    a11y_stop: 'Stop',
 
     lang_en: 'English',
     lang_ja: '日本語',
@@ -131,7 +137,7 @@ const STRINGS = {
     settings_title: '設定',
     settings_language: '言語',
     settings_pro: 'Pro',
-    settings_proTeaser: '近日公開：自然な人間の声（ElevenLabs）',
+    settings_proTeaser: '近日公開：自然な人間の声',
     settings_upgrade: 'Proにアップグレード',
     settings_restore: '購入を復元',
     settings_about: 'このアプリについて',
@@ -140,6 +146,12 @@ const STRINGS = {
     settings_contact: 'お問い合わせ',
     comingSoonTitle: '近日公開',
     comingSoonMsg: '今後のアップデートで対応予定です。',
+
+    nowPlaying: '再生中',
+    a11y_prev: '前の文',
+    a11y_next: '次の文',
+    a11y_playPause: '再生 / 一時停止',
+    a11y_stop: '停止',
 
     lang_en: 'English',
     lang_ja: '日本語',
