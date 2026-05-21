@@ -10,14 +10,14 @@ import Constants from 'expo-constants';
 // If you deploy the backend (e.g. to Render), set MANUAL_RELAY_URL to that
 // public https URL and it will be used instead.
 
-const MANUAL_RELAY_URL = ''; // e.g. 'https://snaplisten-relay.onrender.com'
+const MANUAL_RELAY_URL = 'https://snaplisten-backend.onrender.com';
 const BACKEND_PORT = 8787;
 
 // Light auth gate. Must match the server's APP_SECRET env in production.
 // Leave '' for local dev (server then skips the check). This is the
 // intentionally-light tier — it stops casual abuse, not a determined
 // attacker; the real cost ceiling is the server-side daily caps.
-export const APP_SECRET = '';
+export const APP_SECRET = 'IbXpOYmeX0XBumRdXUPM2BQ4OV8j4zG7bGJzlRxtDekDhH61YKOeaf8esoWkXD';
 
 function devRelayUrl() {
   const hostUri =

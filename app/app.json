@@ -16,7 +16,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "app.snaplisten",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -38,7 +40,9 @@
           "photosPermission": "写真から英文を取り込むために使います。",
           "cameraPermission": "英文を撮影して取り込むために使います。"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-asset"
     ]
   }
 }
