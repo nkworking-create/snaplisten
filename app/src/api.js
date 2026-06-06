@@ -10,6 +10,8 @@ function friendly(status, err) {
     return '今日の音声作成の上限に達しました。また明日試してね。';
   if (code === 'tts_quota') return '音声サービスが混み合っています。少し時間をおいてもう一度試してね。';
   if (code === 'pro_required') return 'この音声は Pro プラン専用です。';
+  if (code === 'pro_quota') return '今月の高音声生成の上限に達しました。来月までは端末の声で再生されます。';
+  if (code === 'synth_failed') return '音声の生成に失敗しました。少し時間をおいてもう一度。';
   if (code === 'apple_not_configured') return '購入の確認サーバーが準備中です。少し待ってからもう一度。';
   if (code === 'bundle_mismatch' || code === 'product_unknown') return 'この購入はこのアプリのものではないようです。';
   if (code === 'verify_failed') return '購入の確認に失敗しました。少し時間をおいて「購入を復元」を試してね。';
@@ -70,6 +72,12 @@ export function synthesizeSentences(texts) {
 // the per-install entitlement, and returns whether this install is Pro.
 export function verifyReceipt({ transactionId, originalTransactionId }) {
   return authedPost('/verify-receipt', { transactionId, originalTransactionId }); // { entitled, until, productId }
+}
+
+// Synthesize a session's sentences into mp3 URLs (Pro only). Server caches
+// by content hash, so the same sentence is generated at most once.
+export function synthesizeVoice(sentences) {
+  return authedPost('/voice/synthesize', { sentences }); // { clips: [{ text, hash, url, cached }] }
 }
 
 // Cheap GET so the client can refresh its Pro state on launch.

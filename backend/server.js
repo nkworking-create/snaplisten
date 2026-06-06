@@ -18,8 +18,10 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { getTransactionInfo, getLatestSubscriptionTx, isAppleConfigured, APPLE_BUNDLE_ID } = require('./appleVerify');
-const { setEntitlement, getEntitlement, isPro, clearEntitlement } = require('./entitlements');
+const { setEntitlement, getEntitlement, isPro, clearEntitlement, consumeProChars } = require('./entitlements');
 
 const PRO_PRODUCT_IDS = new Set([
   'app.snaplisten.pro.monthly',
@@ -416,6 +418,73 @@ app.post('/verify-receipt', callLimiter, requireToken, async (req, res) => {
 app.get('/me/pro', requireToken, (req, res) => {
   const e = getEntitlement(req.installId);
   res.json({ entitled: !!e, until: e?.proUntil || 0, productId: e?.productId || null });
+});
+
+// --- Pro voice: ElevenLabs synthesis with content-addressed cache ---
+// Files live in backend/cache/<sha1>.mp3 and are served immutable. The cache
+// is "best effort": Render's free tier filesystem resets on restart, but
+// within a deploy the same sentence costs us zero ElevenLabs spend twice.
+
+const CACHE_DIR = path.join(__dirname, 'cache');
+try { fs.mkdirSync(CACHE_DIR, { recursive: true }); } catch {}
+
+app.use('/voice/cache', express.static(CACHE_DIR, {
+  maxAge: '30d',
+  immutable: true,
+  fallthrough: false,
+}));
+
+app.post('/voice/synthesize', callLimiter, requireToken, async (req, res) => {
+  if (!isPro(req.installId)) return res.status(402).json({ error: 'pro_required' });
+  if (!ELEVENLABS_API_KEY) return res.status(500).json({ error: 'ELEVENLABS_API_KEY not set on server' });
+  const sentences = (Array.isArray(req.body?.sentences) ? req.body.sentences : [])
+    .map((s) => String(s || '').trim())
+    .filter(Boolean);
+  if (!sentences.length) return res.status(400).json({ error: 'sentences required' });
+  if (sentences.length > 60) return res.status(413).json({ error: 'too_many_sentences', max: 60 });
+  const totalChars = sentences.reduce((n, t) => n + t.length, 0);
+  if (totalChars > MAX_TTS_CHARS * 10) return res.status(413).json({ error: 'text_too_long' });
+
+  // Cache check (no spend for hits).
+  const results = new Array(sentences.length);
+  const misses = [];
+  for (let i = 0; i < sentences.length; i++) {
+    const text = sentences[i];
+    const hash = crypto.createHash('sha1').update(text).digest('hex');
+    const file = path.join(CACHE_DIR, `${hash}.mp3`);
+    if (fs.existsSync(file)) {
+      results[i] = { text, hash, url: `/voice/cache/${hash}.mp3`, cached: true };
+    } else {
+      misses.push({ index: i, text, hash, file });
+    }
+  }
+
+  // Monthly Pro cap is charged on NEW characters only.
+  if (misses.length) {
+    const newChars = misses.reduce((n, m) => n + m.text.length, 0);
+    const gate = consumeProChars(req.installId, newChars);
+    if (!gate.ok) {
+      const code = gate.error || 'pro_quota';
+      return res.status(429).json({ error: code, count: gate.count, cap: gate.cap });
+    }
+  }
+
+  // Synthesize misses, gentle pacing.
+  for (const m of misses) {
+    try {
+      const out = await callElevenLabs(m.text);
+      fs.writeFileSync(m.file, Buffer.from(out.audioBase64, 'base64'));
+      results[m.index] = { text: m.text, hash: m.hash, url: `/voice/cache/${m.hash}.mp3`, cached: false };
+    } catch (err) {
+      console.error('voice synth failed:', m.text.slice(0, 40), err?.message);
+      if (quotaHit(err)) return res.status(429).json({ error: 'tts_quota' });
+      return res.status(502).json({ error: 'synth_failed', detail: err?.message });
+    }
+    await sleep(200);
+  }
+
+  console.log(`voice install=${req.installId.slice(0, 8)} req=${sentences.length} miss=${misses.length}`);
+  res.json({ clips: results });
 });
 
 app.get('/health', (_req, res) => res.json({ ok: true }));

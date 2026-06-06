@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { deleteSession } from '../storage';
@@ -7,6 +9,7 @@ import { t, useLanguage } from '../i18n';
 import {
   usePlayer, tapSentence, playAll, togglePlay,
   setLoop, cycleSpeed, stopPlayback, clearIfDeleted,
+  activate,
 } from '../player';
 
 const FG = '#374151';
@@ -16,6 +19,10 @@ export default function PlayerScreen({ session, onBack, onDeleted }) {
   useLanguage();
   const player = usePlayer();
   const sentences = session.sentences || [];
+
+  // Prep the audio path on session open (Pro: batch-synth ElevenLabs into cache;
+  // Free: no-op). Failure falls back to device speech silently.
+  useEffect(() => { activate(session); }, [session?.id]);
 
   // "This session is what's currently playing" -> drives highlight + play icon.
   const isMine = player.session?.id === session.id;
@@ -70,7 +77,10 @@ export default function PlayerScreen({ session, onBack, onDeleted }) {
       <TouchableOpacity onPress={onBack}>
         <Text style={styles.link}>{t('backToLibrary')}</Text>
       </TouchableOpacity>
-      <Text style={styles.hint}>{t('playerHint')}</Text>
+      <View style={styles.hintRow}>
+        <Text style={styles.hint}>{t('playerHint')}</Text>
+        {player.busy ? <ActivityIndicator size="small" color="#9ca3af" /> : null}
+      </View>
 
       <ScrollView style={styles.list} contentContainerStyle={{ paddingVertical: 12 }}>
         {sentences.map((s, i) => (
@@ -114,7 +124,8 @@ export default function PlayerScreen({ session, onBack, onDeleted }) {
 const styles = StyleSheet.create({
   flex: { flex: 1, padding: 24, paddingTop: 16 },
   link: { color: FG, fontSize: 15 },
-  hint: { color: '#6b7280', fontSize: 13, marginTop: 10 },
+  hintRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  hint: { color: '#6b7280', fontSize: 13 },
   list: { flex: 1, marginTop: 6 },
   empty: { color: '#9ca3af', fontSize: 16, textAlign: 'center' },
   row: { paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, marginBottom: 8 },

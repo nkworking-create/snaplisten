@@ -50,4 +50,21 @@ function clearEntitlement(installId) {
   queueSave();
 }
 
-module.exports = { setEntitlement, getEntitlement, isPro, clearEntitlement };
+// Monthly char cap on Pro voice synthesis. Cap is per calendar month (UTC).
+// Cache hits don't consume — only NEW ElevenLabs chars do.
+function consumeProChars(installId, chars) {
+  const cap = Number(process.env.PRO_MONTHLY_CHARS || 20000);
+  const e = store[installId];
+  if (!e) return { ok: false, error: 'not_pro' };
+  if (!e.proUntil || e.proUntil < Date.now()) return { ok: false, error: 'not_pro' };
+  const month = new Date().toISOString().slice(0, 7); // YYYY-MM
+  if (!e.usage || e.usage.month !== month) e.usage = { month, chars: 0 };
+  if (e.usage.chars + chars > cap) {
+    return { ok: false, error: 'pro_quota', count: e.usage.chars, cap };
+  }
+  e.usage.chars += chars;
+  queueSave();
+  return { ok: true, count: e.usage.chars, cap };
+}
+
+module.exports = { setEntitlement, getEntitlement, isPro, clearEntitlement, consumeProChars };
