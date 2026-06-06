@@ -4,6 +4,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { t, useLanguage } from '../i18n';
 import { usePlayer, togglePlay, nextSentence, prevSentence, stopPlayback } from '../player';
+import AdBanner from '../components/AdBanner';
 
 const FG = '#374151';
 const MUTED = '#6b7280';
@@ -119,6 +120,8 @@ export default function LibraryScreen({ sessions, onOpen, onNew, onRename, onSet
       <TouchableOpacity style={styles.fab} onPress={onNew}>
         <Text style={styles.fabText}>{t('newButton')}</Text>
       </TouchableOpacity>
+
+      <AdBanner />
     </View>
   );
 }
