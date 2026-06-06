@@ -5,16 +5,19 @@ import LibraryScreen from './src/screens/LibraryScreen';
 import CaptureScreen from './src/screens/CaptureScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import PaywallScreen from './src/screens/PaywallScreen';
 import { listSessions, renameSession } from './src/storage';
 import { initLanguage } from './src/i18n';
+import { initPro } from './src/pro';
 
 export default function App() {
-  const [screen, setScreen] = useState('library'); // library | capture | player | settings
+  const [screen, setScreen] = useState('library'); // library | capture | player | settings | paywall
   const [sessions, setSessions] = useState([]);
   const [active, setActive] = useState(null);
 
   useEffect(() => {
     initLanguage();
+    initPro();
     // Audio session: play through the silent switch AND keep going when
     // the app is sent to the background or the screen is locked.
     setAudioModeAsync({
@@ -76,7 +79,13 @@ export default function App() {
         />
       )}
       {screen === 'settings' && (
-        <SettingsScreen onBack={() => setScreen('library')} />
+        <SettingsScreen
+          onBack={() => setScreen('library')}
+          onOpenPaywall={() => setScreen('paywall')}
+        />
+      )}
+      {screen === 'paywall' && (
+        <PaywallScreen onBack={() => setScreen('settings')} />
       )}
     </SafeAreaView>
   );

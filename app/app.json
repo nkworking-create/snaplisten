@@ -17,8 +17,10 @@
       "bundleIdentifier": "app.snaplisten",
       "infoPlist": {
         "UIBackgroundModes": [
+          "audio",
           "audio"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -27,7 +29,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -42,7 +48,13 @@
         }
       ],
       "expo-font",
-      "expo-asset"
-    ]
+      "expo-asset",
+      "expo-iap"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a421cfb4-483d-49fd-ad03-68df0b9a9555"
+      }
+    }
   }
 }

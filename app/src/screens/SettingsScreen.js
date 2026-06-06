@@ -4,16 +4,30 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { t, useLanguage, setLanguage, getLang } from '../i18n';
+import { usePro, restore } from '../pro';
 
 const FG = '#374151';
 const BG = '#f3f4f6';
 const MUTED = '#6b7280';
 const SUBTLE = '#9ca3af';
 
-export default function SettingsScreen({ onBack }) {
+export default function SettingsScreen({ onBack, onOpenPaywall }) {
   useLanguage(); // re-render on language change
   const lang = getLang();
+  const pro = usePro();
   const version = Constants.expoConfig?.version || '1.0.0';
+
+  async function onRestore() {
+    const res = await restore();
+    if (res?.ok) {
+      Alert.alert(
+        res.restored ? t('paywall_thanks_title') : t('readFail'),
+        res.restored ? t('paywall_restored') : t('paywall_no_restore'),
+      );
+    } else if (res?.error) {
+      Alert.alert(t('paywall_failed'), res.error);
+    }
+  }
 
   function comingSoon() {
     Alert.alert(t('comingSoonTitle'), t('comingSoonMsg'));
@@ -58,9 +72,26 @@ export default function SettingsScreen({ onBack }) {
         </View>
 
         <Text style={styles.sectionLabel}>{t('settings_pro')}</Text>
-        <View style={[styles.card, styles.cardDim]} pointerEvents="none">
-          <Text style={styles.comingSoonBig}>{t('comingSoonTitle')}</Text>
-          <Text style={styles.comingSoonSub}>{t('settings_proTeaser')}</Text>
+        <View style={styles.card}>
+          {pro.isPro ? (
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>{t('paywall_title')}</Text>
+              <View style={styles.proPill}>
+                <Ionicons name="checkmark" size={14} color="#fff" />
+                <Text style={styles.proPillText}>Pro</Text>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.row} onPress={onOpenPaywall}>
+              <Text style={styles.rowLabel}>{t('settings_upgrade')}</Text>
+              <Ionicons name="chevron-forward" size={18} color={SUBTLE} />
+            </TouchableOpacity>
+          )}
+          <View style={styles.sep} />
+          <TouchableOpacity style={styles.row} onPress={onRestore} disabled={pro.busy}>
+            <Text style={styles.rowLabel}>{t('settings_restore')}</Text>
+            <Ionicons name="refresh" size={18} color={SUBTLE} />
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionLabel}>{t('settings_about')}</Text>
@@ -92,13 +123,10 @@ const styles = StyleSheet.create({
   rowLabel: { color: '#111827', fontSize: 16 },
   rowValue: { color: MUTED, fontSize: 15 },
   sep: { height: 1, backgroundColor: '#e5e7eb' },
-  cardDim: { opacity: 0.55 },
-  comingSoonBig: {
-    color: FG, fontSize: 17, fontWeight: '700',
-    paddingHorizontal: 16, paddingTop: 16,
+  proPill: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#111827', paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 999,
   },
-  comingSoonSub: {
-    color: MUTED, fontSize: 13, lineHeight: 19,
-    paddingHorizontal: 16, paddingTop: 4, paddingBottom: 16,
-  },
+  proPillText: { color: '#fff', fontSize: 12, fontWeight: '700', marginLeft: 4 },
 });

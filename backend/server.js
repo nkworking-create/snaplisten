@@ -18,6 +18,13 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
+const { getTransactionInfo, getLatestSubscriptionTx, isAppleConfigured, APPLE_BUNDLE_ID } = require('./appleVerify');
+const { setEntitlement, getEntitlement, isPro, clearEntitlement } = require('./entitlements');
+
+const PRO_PRODUCT_IDS = new Set([
+  'app.snaplisten.pro.monthly',
+  'app.snaplisten.pro.yearly',
+]);
 
 const app = express();
 app.set('trust proxy', 1); // Render/!proxies: get the real client IP
@@ -278,6 +285,8 @@ app.post('/tts', callLimiter, requireToken, async (req, res) => {
     return res.status(413).json({ error: 'text_too_long', max: MAX_TTS_CHARS });
 
   const provider = (req.body?.provider || TTS_PROVIDER).toLowerCase();
+  if (provider === 'elevenlabs' && !isPro(req.installId))
+    return res.status(402).json({ error: 'pro_required' });
   if (provider === 'elevenlabs' && !ELEVENLABS_API_KEY)
     return res.status(500).json({ error: 'ELEVENLABS_API_KEY not set on server' });
   if (provider !== 'elevenlabs' && !GEMINI_API_KEY)
@@ -317,6 +326,8 @@ app.post('/tts-batch', callLimiter, requireToken, async (req, res) => {
     return res.status(413).json({ error: 'text_too_long' });
 
   const provider = (req.body?.provider || TTS_PROVIDER).toLowerCase();
+  if (provider === 'elevenlabs' && !isPro(req.installId))
+    return res.status(402).json({ error: 'pro_required' });
   if (provider === 'elevenlabs' && !ELEVENLABS_API_KEY)
     return res.status(500).json({ error: 'ELEVENLABS_API_KEY not set on server' });
   if (provider !== 'elevenlabs' && !GEMINI_API_KEY)
@@ -353,6 +364,58 @@ app.post('/tts-batch', callLimiter, requireToken, async (req, res) => {
     if (quotaHit(err)) return res.status(429).json({ error: 'tts_quota' });
     return res.status(502).json({ error: 'TTS failed', detail: err?.message });
   }
+});
+
+// --- Pro entitlement ---------------------------------------------------
+
+// Verify an Apple IAP transaction and store the entitlement against this install.
+// Client posts after a successful purchase OR a restore.
+app.post('/verify-receipt', callLimiter, requireToken, async (req, res) => {
+  if (!isAppleConfigured())
+    return res.status(500).json({ error: 'apple_not_configured' });
+
+  const { transactionId, originalTransactionId } = req.body || {};
+  if (!transactionId && !originalTransactionId)
+    return res.status(400).json({ error: 'transactionId_required' });
+
+  try {
+    // Prefer querying the subscription state so we get the latest renewal.
+    let tx;
+    if (originalTransactionId) {
+      tx = await getLatestSubscriptionTx(originalTransactionId);
+    } else {
+      tx = await getTransactionInfo(transactionId);
+      if (tx?.originalTransactionId && tx.originalTransactionId !== transactionId) {
+        try { tx = await getLatestSubscriptionTx(tx.originalTransactionId); } catch {}
+      }
+    }
+
+    if (tx?.bundleId && tx.bundleId !== APPLE_BUNDLE_ID)
+      return res.status(403).json({ error: 'bundle_mismatch' });
+    if (!PRO_PRODUCT_IDS.has(tx?.productId))
+      return res.status(403).json({ error: 'product_unknown', productId: tx?.productId });
+
+    const proUntil = Number(tx?.expiresDate || 0);
+    if (!proUntil || proUntil < Date.now()) {
+      clearEntitlement(req.installId);
+      return res.json({ entitled: false, until: proUntil });
+    }
+    setEntitlement(req.installId, {
+      proUntil,
+      originalTransactionId: tx.originalTransactionId || transactionId,
+      productId: tx.productId,
+    });
+    return res.json({ entitled: true, until: proUntil, productId: tx.productId });
+  } catch (err) {
+    console.error('verify-receipt failed:', err?.message);
+    return res.status(502).json({ error: 'verify_failed', detail: err?.message });
+  }
+});
+
+// Cheap status check the client can poll on launch.
+app.get('/me/pro', requireToken, (req, res) => {
+  const e = getEntitlement(req.installId);
+  res.json({ entitled: !!e, until: e?.proUntil || 0, productId: e?.productId || null });
 });
 
 app.get('/health', (_req, res) => res.json({ ok: true }));

@@ -9,6 +9,10 @@ function friendly(status, err) {
   if (code === 'daily_limit' && err.scope === 'tts')
     return '今日の音声作成の上限に達しました。また明日試してね。';
   if (code === 'tts_quota') return '音声サービスが混み合っています。少し時間をおいてもう一度試してね。';
+  if (code === 'pro_required') return 'この音声は Pro プラン専用です。';
+  if (code === 'apple_not_configured') return '購入の確認サーバーが準備中です。少し待ってからもう一度。';
+  if (code === 'bundle_mismatch' || code === 'product_unknown') return 'この購入はこのアプリのものではないようです。';
+  if (code === 'verify_failed') return '購入の確認に失敗しました。少し時間をおいて「購入を復元」を試してね。';
   if (code === 'rate_limited') return 'アクセスが集中しています。少し待ってからもう一度。';
   if (code === 'too_many_registrations') return '登録の試行が多すぎます。少し待ってね。';
   if (code === 'image_too_large') return '画像が大きすぎます。別の写真で試してね。';
@@ -58,4 +62,23 @@ export function synthesize(text) {
 // Sentences -> one audio clip each, so the app can loop a single sentence.
 export function synthesizeSentences(texts) {
   return authedPost('/tts-batch', { texts }); // { clips: [{ text, audioBase64, mimeType }] }
+}
+
+// --- Pro entitlement ---------------------------------------------------
+
+// Sent after a successful purchase / restore. Server queries Apple, updates
+// the per-install entitlement, and returns whether this install is Pro.
+export function verifyReceipt({ transactionId, originalTransactionId }) {
+  return authedPost('/verify-receipt', { transactionId, originalTransactionId }); // { entitled, until, productId }
+}
+
+// Cheap GET so the client can refresh its Pro state on launch.
+export async function getProStatus() {
+  let token = await ensureToken();
+  const send = (t) =>
+    fetch(`${RELAY_URL}/me/pro`, { headers: { Authorization: `Bearer ${t}` } });
+  let res = await send(token);
+  if (res.status === 401) { token = await refreshToken(); res = await send(token); }
+  if (!res.ok) return { entitled: false };
+  return res.json(); // { entitled, until, productId }
 }

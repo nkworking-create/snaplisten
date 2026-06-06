@@ -6,3 +6,7 @@ dist/
 web-build/
 *.log
 .DS_Store
+backend/entitlements.json
+screenshots-raw/
+screenshots-final/
+
