@@ -18,7 +18,7 @@ const ACCENT = '#111827';
 const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 const PRIVACY_URL = 'https://nkworking-create.github.io/snaplisten-site/';
 
-export default function PaywallScreen({ onBack, initialPlan = 'monthly' }) {
+export default function PaywallScreen({ onBack, initialPlan = 'monthly', onboarding = false }) {
   useLanguage();
   const pro = usePro();
 
@@ -69,7 +69,9 @@ export default function PaywallScreen({ onBack, initialPlan = 'monthly' }) {
   return (
     <View style={styles.flex}>
       <TouchableOpacity onPress={onBack} hitSlop={10}>
-        <Text style={styles.link}>{t('backToLibrary')}</Text>
+        <Text style={styles.link}>
+          {onboarding ? t('onboard_later') : t('backToLibrary')}
+        </Text>
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>

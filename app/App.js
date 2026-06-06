@@ -9,6 +9,8 @@ import PaywallScreen from './src/screens/PaywallScreen';
 import { listSessions, renameSession } from './src/storage';
 import { initLanguage } from './src/i18n';
 import { initPro } from './src/pro';
+import { hasOnboarded, markOnboarded } from './src/onboarding';
+import { recordSessionAndMaybeAsk } from './src/reviewPrompt';
 import Constants from 'expo-constants';
 
 let mobileAdsLib = null;
@@ -19,10 +21,20 @@ export default function App() {
   const [screen, setScreen] = useState('library'); // library | capture | player | settings | paywall
   const [sessions, setSessions] = useState([]);
   const [active, setActive] = useState(null);
+  const [onboarding, setOnboarding] = useState(false);
 
   useEffect(() => {
     initLanguage();
     initPro();
+    // First-launch paywall: show it as the initial screen if the user
+    // hasn't seen it yet. Apple allows this as long as a "Maybe later"
+    // exit is clearly available, which our PaywallScreen provides.
+    (async () => {
+      if (!(await hasOnboarded())) {
+        setOnboarding(true);
+        setScreen('paywall');
+      }
+    })();
     // Initialize AdMob; no-op in Expo Go where the native bridge is missing.
     if (!isExpoGo) {
       try { mobileAdsLib?.().initialize?.().catch?.(() => {}); } catch { /* ignore */ }
@@ -34,6 +46,12 @@ export default function App() {
       shouldPlayInBackground: true,
     }).catch(() => {});
   }, []);
+
+  async function finishOnboarding() {
+    await markOnboarded();
+    setOnboarding(false);
+    setScreen('library');
+  }
 
   const refresh = useCallback(async () => {
     setSessions(await listSessions());
@@ -55,6 +73,8 @@ export default function App() {
   async function afterSave(session) {
     await refresh();
     openSession(session);
+    // Ask for an App Store rating after meaningful engagement (3rd save).
+    recordSessionAndMaybeAsk();
   }
 
   async function handleRename(id, title) {
@@ -94,7 +114,10 @@ export default function App() {
         />
       )}
       {screen === 'paywall' && (
-        <PaywallScreen onBack={() => setScreen('settings')} />
+        <PaywallScreen
+          onBack={onboarding ? finishOnboarding : () => setScreen('settings')}
+          onboarding={onboarding}
+        />
       )}
     </SafeAreaView>
   );

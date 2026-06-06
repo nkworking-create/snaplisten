@@ -101,6 +101,7 @@ const STRINGS = {
     paywall_restored: 'Purchases restored.',
     paywall_no_restore: 'No active purchases found.',
     paywall_failed: 'Purchase could not be completed.',
+    onboard_later: 'Maybe later',
   },
   ja: {
     appTitle: 'SnapListen',
@@ -195,6 +196,7 @@ const STRINGS = {
     paywall_restored: '購入を復元しました。',
     paywall_no_restore: '復元できる購入が見つかりませんでした。',
     paywall_failed: '購入を完了できませんでした。',
+    onboard_later: '後で始める',
   },
 };
 
