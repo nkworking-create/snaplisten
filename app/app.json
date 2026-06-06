@@ -53,7 +53,7 @@
       [
         "react-native-google-mobile-ads",
         {
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "iosAppId": "ca-app-pub-9314100420710496~8153092846",
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
           "userTrackingPermission": false
         }

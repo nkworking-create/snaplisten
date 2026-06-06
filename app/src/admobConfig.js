@@ -10,10 +10,10 @@
 
 export const ADMOB = {
   // From AdMob -> Apps -> SnapListen -> "App ID" (format: ca-app-pub-XXX~XXX).
-  iosAppId: 'ca-app-pub-3940256099942544~1458002511', // placeholder = Google sample app id
-  androidAppId: 'ca-app-pub-3940256099942544~3347511713',
+  iosAppId: 'ca-app-pub-9314100420710496~8153092846',
+  androidAppId: 'ca-app-pub-3940256099942544~3347511713', // placeholder until Android ship
 
   // From AdMob -> Apps -> SnapListen -> Ad units -> Banner (format: ca-app-pub-XXX/XXX).
-  iosBannerUnitId: 'ca-app-pub-3940256099942544/2934735716', // placeholder = Google sample banner unit
-  androidBannerUnitId: 'ca-app-pub-3940256099942544/6300978111',
+  iosBannerUnitId: 'ca-app-pub-9314100420710496/8282075038',
+  androidBannerUnitId: 'ca-app-pub-3940256099942544/6300978111', // placeholder until Android ship
 };
