@@ -17,7 +17,6 @@
       "bundleIdentifier": "app.snaplisten",
       "infoPlist": {
         "UIBackgroundModes": [
-          "audio",
           "audio"
         ],
         "ITSAppUsesNonExemptEncryption": false

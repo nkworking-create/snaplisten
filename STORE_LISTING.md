@@ -14,7 +14,10 @@
 ## URL
 - プライバシーポリシー: https://nkworking-create.github.io/snaplisten-site/
 - サポートURL: https://nkworking-create.github.io/snaplisten-site/
+- 利用規約 (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 - マーケティングURL: （任意・空欄でOK）
+
+※ Apple標準EULAを使用。App Store Connectの「App情報 → 使用許諾契約 (License Agreement)」は標準のままにし、上記リンクを下記「説明文」末尾にも明記する（Guideline 3.1.2(c) 対応）。
 
 ## プロモーションテキスト (170字以内・後から変更可)
 教科書・看板・スクショ——目に入った英文を撮るだけ。あなただけのリスニング教材になります。1文ずつ、聴ける until 自分のものになるまで。
@@ -41,7 +44,14 @@
 ■ シンプルだから続く
 余計な機能はありません。撮る、聴く、繰り返す。リスニングを習慣にするための、いちばん短い道です。
 
-今後、より自然な人間の声で聴ける有料プランを準備中です。
+■ SnapListen Pro（自動更新サブスクリプション）
+より自然な人間の声での読み上げと、広告非表示が利用できます。
+・月額プラン（¥480/月）：7日間の無料トライアル付き。トライアル終了後、自動的に月額料金が課金されます。
+・年額プラン（¥3,800/年）
+お支払いは購入確定時にApple IDアカウントに請求されます。サブスクリプションは、現在の期間終了の24時間以上前に自動更新をオフにしない限り自動更新され、更新時に同額が課金されます。購入後、iPhoneの「設定 → Apple ID → サブスクリプション」からいつでも管理・解約できます。
+
+利用規約 (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+プライバシーポリシー: https://nkworking-create.github.io/snaplisten-site/
 
 ## キーワード (100字以内・カンマ区切り・スペースなし推奨)
 英語,リスニング,英語学習,シャドーイング,聞き取り,発音,英会話,音読,英文,リピート,TOEIC,勉強

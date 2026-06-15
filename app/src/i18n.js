@@ -94,7 +94,10 @@ const STRINGS = {
     paywall_yearly_badge: 'Save 33%',
     paywall_start: 'Start subscription',
     paywall_start_trial: 'Start free trial',
-    paywall_terms: 'Terms of Use',
+    paywall_trial_terms: '7-day free trial, then {price}. Auto-renews until canceled; cancel anytime.',
+    paywall_renew_terms: '{price}, auto-renews until canceled; cancel anytime.',
+    paywall_unavailable: 'Subscriptions are temporarily unavailable. Please check your connection and try again later.',
+    paywall_terms: 'Terms of Use (EULA)',
     paywall_disclaimer: 'Subscription auto-renews at the listed price unless canceled at least 24 hours before the period ends. Manage or cancel anytime in iPhone Settings → Apple ID → Subscriptions. Free trials end automatically if canceled before the last 24 hours.',
     paywall_thanks_title: 'Thanks for subscribing!',
     paywall_thanks_msg: 'Pro is now active. Enjoy natural voices and ad-free listening.',
@@ -189,7 +192,10 @@ const STRINGS = {
     paywall_yearly_badge: '33% OFF',
     paywall_start: 'サブスクリプションを開始',
     paywall_start_trial: '無料トライアルを開始',
-    paywall_terms: '利用規約',
+    paywall_trial_terms: '7日間の無料トライアル後、{price}が自動で課金されます。解約するまで自動更新され、いつでも解約できます。',
+    paywall_renew_terms: '{price}が課金され、解約するまで自動更新されます。いつでも解約できます。',
+    paywall_unavailable: '現在サブスクリプションを利用できません。通信環境を確認して、しばらくしてからもう一度お試しください。',
+    paywall_terms: '利用規約（EULA）',
     paywall_disclaimer: 'サブスクリプションは、期間終了の24時間以上前にキャンセルしない限り、自動的に同額で更新されます。iPhoneの「設定 → Apple ID → サブスクリプション」からいつでも管理・解約できます。無料トライアルは、終了の24時間前までに解約すれば料金は発生しません。',
     paywall_thanks_title: 'ご購読ありがとうございます',
     paywall_thanks_msg: 'Proが有効になりました。自然な声と広告非表示でお楽しみください。',
@@ -217,9 +223,15 @@ export async function setLanguage(lang) {
   listeners.forEach((fn) => fn(currentLang));
 }
 
-export function t(key) {
+export function t(key, params) {
   const dict = STRINGS[currentLang] || STRINGS.en;
-  return dict[key] ?? STRINGS.en[key] ?? key;
+  let str = dict[key] ?? STRINGS.en[key] ?? key;
+  if (params) {
+    for (const name of Object.keys(params)) {
+      str = str.split(`{${name}}`).join(String(params[name]));
+    }
+  }
+  return str;
 }
 
 // Hook: re-renders the component whenever the language changes.

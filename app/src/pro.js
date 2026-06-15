@@ -70,8 +70,8 @@ export async function initPro() {
       });
     }
 
-    // 3) Fetch product info.
-    const subs = await IAP.getSubscriptions({ skus: PRODUCT_IDS });
+    // 3) Fetch product info. expo-iap v4 uses fetchProducts({ skus, type }).
+    const subs = await IAP.fetchProducts({ skus: PRODUCT_IDS, type: 'subs' });
     patch({ products: subs || [] });
 
     // 4) Silent restore so prior subscribers stay Pro.
@@ -99,10 +99,20 @@ export async function purchase(productId) {
     await setPro(true);
     return { ok: true, dev: true };
   }
+  if (!state.products || state.products.length === 0) {
+    // Products never loaded (store unreachable / not approved). Requesting a
+    // purchase here would throw an opaque native error — fail with a clear one.
+    patch({ busy: false });
+    return { ok: false, error: 'product_unavailable' };
+  }
   patch({ busy: true });
   try {
-    await IAP.requestSubscription({ sku: productId });
-    // Result is delivered via purchaseUpdatedListener.
+    // expo-iap v4: requestPurchase({ request: { apple: { sku } }, type: 'subs' }).
+    // Result is delivered via purchaseUpdatedListener / purchaseErrorListener.
+    await IAP.requestPurchase({
+      request: { apple: { sku: productId } },
+      type: 'subs',
+    });
     return { ok: true };
   } catch (e) {
     patch({ busy: false });

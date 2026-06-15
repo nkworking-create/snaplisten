@@ -47,7 +47,10 @@ export default function PaywallScreen({ onBack, initialPlan = 'monthly', onboard
       Alert.alert(t('paywall_thanks_title'), t('paywall_thanks_msg'));
       onBack?.();
     } else if (res?.error) {
-      Alert.alert(t('paywall_failed'), res.error);
+      const msg = res.error === 'product_unavailable'
+        ? t('paywall_unavailable')
+        : res.error;
+      Alert.alert(t('paywall_failed'), msg);
     }
   }
 
@@ -65,6 +68,9 @@ export default function PaywallScreen({ onBack, initialPlan = 'monthly', onboard
   }
 
   const ctaLabel = selected === 'monthly' ? t('paywall_start_trial') : t('paywall_start');
+  const termsLine = selected === 'monthly'
+    ? t('paywall_trial_terms', { price: monthlyPrice })
+    : t('paywall_renew_terms', { price: yearlyPrice });
 
   return (
     <View style={styles.flex}>
@@ -98,6 +104,8 @@ export default function PaywallScreen({ onBack, initialPlan = 'monthly', onboard
           badge={t('paywall_yearly_badge')}
           highlight
         />
+
+        <Text style={styles.termsLine}>{termsLine}</Text>
 
         <TouchableOpacity
           style={[styles.cta, pro.busy && styles.ctaBusy]}
@@ -208,6 +216,11 @@ const styles = StyleSheet.create({
   },
   ctaBusy: { opacity: 0.7 },
   ctaText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+
+  termsLine: {
+    color: INK, fontSize: 13, lineHeight: 19, fontWeight: '600',
+    textAlign: 'center', marginTop: 16,
+  },
 
   restoreBtn: { alignItems: 'center', marginTop: 14, paddingVertical: 8 },
   restoreText: { color: FG, fontSize: 15 },
