@@ -49,8 +49,11 @@ async function getTransactionInfo(transactionId) {
   const token = makeJwt();
   const p = `/inApps/v1/transactions/${encodeURIComponent(transactionId)}`;
   // Try production first; fall back to sandbox (TestFlight / StoreKit testing use sandbox).
+  const seen = [];
   for (const base of [PROD, SANDBOX]) {
     const r = await tryFetch(base, p, token);
+    const env = base.includes('sandbox') ? 'sandbox' : 'prod';
+    seen.push(`${env}:${r.status}`);
     if (r.ok) {
       const j = await r.json();
       return decodeJwsPayload(j.signedTransactionInfo);
@@ -60,7 +63,7 @@ async function getTransactionInfo(transactionId) {
       throw new Error(`Apple ${r.status}: ${detail.slice(0, 200)}`);
     }
   }
-  throw new Error('transaction_not_found');
+  throw new Error(`transaction_not_found [tx ${seen.join(' ')}]`);
 }
 
 // Look up the current subscription state by the ORIGINAL transaction id.
@@ -69,8 +72,11 @@ async function getLatestSubscriptionTx(originalTransactionId) {
   if (!originalTransactionId) throw new Error('originalTransactionId required');
   const token = makeJwt();
   const p = `/inApps/v1/subscriptions/${encodeURIComponent(originalTransactionId)}`;
+  const seen = [];
   for (const base of [PROD, SANDBOX]) {
     const r = await tryFetch(base, p, token);
+    const env = base.includes('sandbox') ? 'sandbox' : 'prod';
+    seen.push(`${env}:${r.status}`);
     if (r.ok) {
       const j = await r.json();
       let latest = null;
@@ -87,7 +93,7 @@ async function getLatestSubscriptionTx(originalTransactionId) {
       throw new Error(`Apple ${r.status}: ${detail.slice(0, 200)}`);
     }
   }
-  throw new Error('subscription_not_found');
+  throw new Error(`subscription_not_found [sub ${seen.join(' ')}]`);
 }
 
 function isAppleConfigured() {

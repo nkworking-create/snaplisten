@@ -379,6 +379,7 @@ app.post('/verify-receipt', callLimiter, requireToken, async (req, res) => {
   const { transactionId, originalTransactionId } = req.body || {};
   if (!transactionId && !originalTransactionId)
     return res.status(400).json({ error: 'transactionId_required' });
+  console.log(`verify-receipt install=${req.installId.slice(0, 8)} tx=${transactionId || '-'} orig=${originalTransactionId || '-'}`);
 
   try {
     // Prefer querying the subscription state so we get the latest renewal.
