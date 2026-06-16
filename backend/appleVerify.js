@@ -21,12 +21,13 @@ function privateKeyPem() {
 }
 
 function makeJwt() {
-  return jwt.sign({}, privateKeyPem(), {
+  // App Store Server API requires the app's bundle id in the `bid` payload
+  // claim (NOT `sub`). Omitting it makes Apple reject the token with 401.
+  return jwt.sign({ bid: BUNDLE_ID }, privateKeyPem(), {
     algorithm: 'ES256',
     expiresIn: '20m',
     issuer: ISSUER_ID,
     audience: 'appstoreconnect-v1',
-    subject: BUNDLE_ID,
     keyid: KEY_ID,
     header: { alg: 'ES256', kid: KEY_ID, typ: 'JWT' },
   });
