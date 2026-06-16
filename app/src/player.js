@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
 import { createAudioPlayer } from 'expo-audio';
 import { isPro } from './pro';
 import { synthesizeVoice } from './api';
 import { ensureLocal } from './audioCache';
+
+// User voice preference (Pro only). 'natural' = ElevenLabs mp3, 'device' =
+// device TTS. Free users always get device speech regardless of this value.
+const VOICE_PREF_KEY = 'snaplisten.voicePref.v1';
 
 // Player state lives at module level so audio survives screen navigation.
 // Components subscribe via usePlayer().
@@ -24,6 +29,7 @@ let state = {
   behavior: 'auto',  // 'auto' (respects loop) | 'through' (play to end)
   busy: false,       // synthesizing or downloading for the session
   mode: 'speech',    // 'speech' = device TTS | 'audio' = ElevenLabs mp3
+  voicePref: 'natural', // 'natural' | 'device' (Pro choice; persisted)
 };
 
 let token = 0;
@@ -32,6 +38,24 @@ function notify() { for (const fn of listeners) fn(state); }
 function patch(p) { state = { ...state, ...p }; notify(); }
 
 export function getState() { return state; }
+
+// Load the saved voice preference at app startup.
+export async function loadVoicePref() {
+  try {
+    const v = await AsyncStorage.getItem(VOICE_PREF_KEY);
+    if (v === 'device' || v === 'natural') patch({ voicePref: v });
+  } catch { /* keep default */ }
+}
+
+export function getVoicePref() { return state.voicePref; }
+
+// Persist the choice. The PlayerScreen re-runs activate() when voicePref
+// changes, so the next playback uses the selected engine.
+export async function setVoicePref(v) {
+  const pref = v === 'device' ? 'device' : 'natural';
+  patch({ voicePref: pref });
+  try { await AsyncStorage.setItem(VOICE_PREF_KEY, pref); } catch { /* ignore */ }
+}
 
 export function usePlayer() {
   const [, set] = useState(state);
@@ -55,7 +79,8 @@ export async function activate(session) {
     patch({ mode: 'speech' });
     return;
   }
-  if (!isPro()) {
+  // Free users, or Pro users who chose the device voice, use device speech.
+  if (!isPro() || state.voicePref === 'device') {
     activeSessionId = session.id; activeClips = null;
     patch({ mode: 'speech' });
     return;

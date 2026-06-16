@@ -1,21 +1,25 @@
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { t, useLanguage, setLanguage, getLang } from '../i18n';
 import { usePro, restore } from '../pro';
+import { usePlayer, setVoicePref } from '../player';
 
 const FG = '#374151';
 const BG = '#f3f4f6';
 const MUTED = '#6b7280';
 const SUBTLE = '#9ca3af';
+const PRIVACY_URL = 'https://nkworking-create.github.io/snaplisten-site/';
 
 export default function SettingsScreen({ onBack, onOpenPaywall }) {
   useLanguage(); // re-render on language change
   const lang = getLang();
   const pro = usePro();
+  const player = usePlayer();
   const version = Constants.expoConfig?.version || '1.0.0';
+  const naturalOn = pro.isPro && player.voicePref !== 'device';
 
   async function onRestore() {
     const res = await restore();
@@ -94,11 +98,31 @@ export default function SettingsScreen({ onBack, onOpenPaywall }) {
           </TouchableOpacity>
         </View>
 
+        <Text style={styles.sectionLabel}>{t('settings_voice')}</Text>
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <View style={styles.rowTextWrap}>
+              <Text style={styles.rowLabel}>{t('settings_voice_natural')}</Text>
+              <Text style={styles.rowSub}>{t('settings_voice_natural_sub')}</Text>
+            </View>
+            {pro.isPro ? (
+              <Switch
+                value={naturalOn}
+                onValueChange={(on) => setVoicePref(on ? 'natural' : 'device')}
+              />
+            ) : (
+              <TouchableOpacity onPress={onOpenPaywall} hitSlop={10}>
+                <Ionicons name="lock-closed" size={18} color={SUBTLE} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         <Text style={styles.sectionLabel}>{t('settings_about')}</Text>
         <View style={styles.card}>
           <LinkRow label={t('settings_version')} value={version} />
           <View style={styles.sep} />
-          <LinkRow label={t('settings_privacy')} onPress={comingSoon} />
+          <LinkRow label={t('settings_privacy')} onPress={() => Linking.openURL(PRIVACY_URL)} />
           <View style={styles.sep} />
           <LinkRow label={t('settings_contact')} onPress={comingSoon} />
         </View>
@@ -121,6 +145,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14, paddingHorizontal: 16,
   },
   rowLabel: { color: '#111827', fontSize: 16 },
+  rowTextWrap: { flex: 1, paddingRight: 12 },
+  rowSub: { color: MUTED, fontSize: 12, marginTop: 3, lineHeight: 16 },
   rowValue: { color: MUTED, fontSize: 15 },
   sep: { height: 1, backgroundColor: '#e5e7eb' },
   proPill: {

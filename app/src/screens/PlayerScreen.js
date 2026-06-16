@@ -11,6 +11,7 @@ import {
   setLoop, cycleSpeed, stopPlayback, clearIfDeleted,
   activate,
 } from '../player';
+import { usePro } from '../pro';
 
 const FG = '#374151';
 const BG = '#f3f4f6';
@@ -18,11 +19,13 @@ const BG = '#f3f4f6';
 export default function PlayerScreen({ session, onBack, onDeleted }) {
   useLanguage();
   const player = usePlayer();
+  const pro = usePro();
   const sentences = session.sentences || [];
 
-  // Prep the audio path on session open (Pro: batch-synth ElevenLabs into cache;
-  // Free: no-op). Failure falls back to device speech silently.
-  useEffect(() => { activate(session); }, [session?.id]);
+  // Prep the audio path on session open (Pro + natural voice: batch-synth into
+  // cache; otherwise device speech). Re-runs when Pro status or the voice
+  // preference changes so a purchase / toggle takes effect immediately.
+  useEffect(() => { activate(session); }, [session?.id, pro.isPro, player.voicePref]);
 
   // "This session is what's currently playing" -> drives highlight + play icon.
   const isMine = player.session?.id === session.id;

@@ -9,6 +9,7 @@ import PaywallScreen from './src/screens/PaywallScreen';
 import { listSessions, renameSession } from './src/storage';
 import { initLanguage } from './src/i18n';
 import { initPro } from './src/pro';
+import { loadVoicePref } from './src/player';
 import { hasOnboarded, markOnboarded } from './src/onboarding';
 import { recordSessionAndMaybeAsk } from './src/reviewPrompt';
 import Constants from 'expo-constants';
@@ -26,6 +27,7 @@ export default function App() {
   useEffect(() => {
     initLanguage();
     initPro();
+    loadVoicePref();
     // First-launch paywall: show it as the initial screen if the user
     // hasn't seen it yet. Apple allows this as long as a "Maybe later"
     // exit is clearly available, which our PaywallScreen provides.
