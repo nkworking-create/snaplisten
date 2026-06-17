@@ -40,6 +40,11 @@ export default function PaywallScreen({ onBack, initialPlan = 'monthly', onboard
     || yearly?.displayPrice
     || t('paywall_yearly_price_fallback');
 
+  // Read the REAL introductory (free-trial) offer from the product so we only
+  // ever advertise a trial that actually exists on the App Store product.
+  const monthlyTrial = freeTrialNote(monthly);
+  const yearlyTrial = freeTrialNote(yearly);
+
   async function onStart() {
     const id = selected === 'yearly' ? PRODUCT_YEARLY : PRODUCT_MONTHLY;
     const res = await purchase(id);
@@ -70,7 +75,8 @@ export default function PaywallScreen({ onBack, initialPlan = 'monthly', onboard
   const ctaLabel = t('paywall_continue');
   const heroPrice = selected === 'monthly' ? monthlyPrice : yearlyPrice;
   const heroPeriod = selected === 'monthly' ? t('paywall_per_month') : t('paywall_per_year');
-  const termsLine = selected === 'monthly' ? t('paywall_trial_terms') : t('paywall_renew_terms');
+  const hasTrial = !!(selected === 'monthly' ? monthlyTrial : yearlyTrial);
+  const termsLine = hasTrial ? t('paywall_trial_terms') : t('paywall_renew_terms');
 
   return (
     <View style={styles.flex}>
@@ -94,14 +100,14 @@ export default function PaywallScreen({ onBack, initialPlan = 'monthly', onboard
           onPress={() => setSelected('monthly')}
           title={t('paywall_monthly')}
           price={monthlyPrice}
-          note={t('paywall_trial_badge')}
+          note={monthlyTrial}
         />
         <PlanCard
           active={selected === 'yearly'}
           onPress={() => setSelected('yearly')}
           title={t('paywall_yearly')}
           price={yearlyPrice}
-          note={t('paywall_yearly_badge')}
+          note={yearlyTrial || t('paywall_yearly_badge')}
           highlight
         />
 
@@ -176,6 +182,26 @@ function PlanCard({ active, onPress, title, price, note, highlight }) {
       />
     </TouchableOpacity>
   );
+}
+
+// Returns a localized "free trial" note (e.g. "1週間の無料トライアル付き") when the
+// product actually has a free-trial introductory offer, otherwise null. Reading
+// the real offer keeps the paywall from ever advertising a trial that the App
+// Store product doesn't grant (Guideline 2.1b).
+function freeTrialNote(p) {
+  if (!p) return null;
+  const off = p.subscriptionInfoIOS?.introductoryOffer;
+  const isFree = off?.paymentMode === 'free-trial'
+    || p.introductoryPricePaymentModeIOS === 'free-trial';
+  if (!isFree) return null;
+  const unit = off?.period?.unit || p.introductoryPriceSubscriptionPeriodIOS;
+  const n = off
+    ? (off.periodCount || 1) * (off.period?.value || 1)
+    : (parseInt(p.introductoryPriceNumberOfPeriodsIOS, 10) || 1);
+  const duration = (unit && unit !== 'empty') ? t(`paywall_period_${unit}`, { n }) : null;
+  return duration
+    ? t('paywall_trial_badge', { duration })
+    : t('paywall_trial_badge_generic');
 }
 
 function findProduct(products, id) {
