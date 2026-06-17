@@ -67,10 +67,10 @@ export default function PaywallScreen({ onBack, initialPlan = 'monthly', onboard
     }
   }
 
-  const ctaLabel = selected === 'monthly' ? t('paywall_start_trial') : t('paywall_start');
-  const termsLine = selected === 'monthly'
-    ? t('paywall_trial_terms', { price: monthlyPrice })
-    : t('paywall_renew_terms', { price: yearlyPrice });
+  const ctaLabel = t('paywall_continue');
+  const heroPrice = selected === 'monthly' ? monthlyPrice : yearlyPrice;
+  const heroPeriod = selected === 'monthly' ? t('paywall_per_month') : t('paywall_per_year');
+  const termsLine = selected === 'monthly' ? t('paywall_trial_terms') : t('paywall_renew_terms');
 
   return (
     <View style={styles.flex}>
@@ -94,18 +94,24 @@ export default function PaywallScreen({ onBack, initialPlan = 'monthly', onboard
           onPress={() => setSelected('monthly')}
           title={t('paywall_monthly')}
           price={monthlyPrice}
-          badge={t('paywall_trial_badge')}
+          note={t('paywall_trial_badge')}
         />
         <PlanCard
           active={selected === 'yearly'}
           onPress={() => setSelected('yearly')}
           title={t('paywall_yearly')}
           price={yearlyPrice}
-          badge={t('paywall_yearly_badge')}
+          note={t('paywall_yearly_badge')}
           highlight
         />
 
-        <Text style={styles.termsLine}>{termsLine}</Text>
+        {/* Billed amount is the most prominent pricing element (Guideline
+            3.1.2c); the free-trial note below is intentionally subordinate. */}
+        <View style={styles.priceHero}>
+          <Text style={styles.priceHeroAmount}>{heroPrice}</Text>
+          <Text style={styles.priceHeroPeriod}>{heroPeriod}</Text>
+        </View>
+        <Text style={styles.trialNote}>{termsLine}</Text>
 
         <TouchableOpacity
           style={[styles.cta, pro.busy && styles.ctaBusy]}
@@ -146,7 +152,7 @@ function BenefitRow({ text }) {
   );
 }
 
-function PlanCard({ active, onPress, title, price, badge, highlight }) {
+function PlanCard({ active, onPress, title, price, note, highlight }) {
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -159,13 +165,9 @@ function PlanCard({ active, onPress, title, price, badge, highlight }) {
     >
       <View style={{ flex: 1 }}>
         <Text style={styles.planTitle}>{title}</Text>
-        <Text style={styles.planPrice}>{price}</Text>
+        {note ? <Text style={styles.planNote}>{note}</Text> : null}
       </View>
-      {badge ? (
-        <View style={[styles.badge, highlight && styles.badgeAlt]}>
-          <Text style={[styles.badgeText, highlight && styles.badgeTextAlt]}>{badge}</Text>
-        </View>
-      ) : null}
+      <Text style={styles.planPrice}>{price}</Text>
       <Ionicons
         name={active ? 'radio-button-on' : 'radio-button-off'}
         size={22}
@@ -200,15 +202,20 @@ const styles = StyleSheet.create({
   planActive: { borderColor: ACCENT, backgroundColor: '#ffffff' },
   planHighlight: { backgroundColor: '#eef2ff' },
   planTitle: { color: INK, fontSize: 17, fontWeight: '700' },
-  planPrice: { color: MUTED, fontSize: 14, marginTop: 2 },
+  planNote: { color: MUTED, fontSize: 12, marginTop: 3 },
+  planPrice: { color: INK, fontSize: 16, fontWeight: '700', marginLeft: 10 },
 
-  badge: {
-    backgroundColor: ACCENT,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
+  // Billed amount — the most clear and conspicuous pricing element.
+  priceHero: {
+    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center',
+    marginTop: 20,
   },
-  badgeAlt: { backgroundColor: '#4f46e5' },
-  badgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  badgeTextAlt: { color: '#fff' },
+  priceHeroAmount: { color: INK, fontSize: 36, fontWeight: '800', lineHeight: 40 },
+  priceHeroPeriod: { color: MUTED, fontSize: 15, marginLeft: 6, marginBottom: 5 },
+  // Free-trial / renewal note — intentionally subordinate to the amount.
+  trialNote: {
+    color: MUTED, fontSize: 12, lineHeight: 17, textAlign: 'center', marginTop: 6,
+  },
 
   cta: {
     backgroundColor: ACCENT, borderRadius: 14, paddingVertical: 16,
@@ -216,11 +223,6 @@ const styles = StyleSheet.create({
   },
   ctaBusy: { opacity: 0.7 },
   ctaText: { color: '#fff', fontSize: 17, fontWeight: '700' },
-
-  termsLine: {
-    color: INK, fontSize: 13, lineHeight: 19, fontWeight: '600',
-    textAlign: 'center', marginTop: 16,
-  },
 
   restoreBtn: { alignItems: 'center', marginTop: 14, paddingVertical: 8 },
   restoreText: { color: FG, fontSize: 15 },
